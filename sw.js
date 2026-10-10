@@ -1,7 +1,7 @@
-/* ナイター馬主記 サービスワーカー(バージョン 20261010014029)
+/* ナイター馬主記 サービスワーカー(バージョン 20261010160749)
    ・ゲーム本体とアイコンを端末に保存して、電波がなくても起動できるようにする
    ・ネットにつながっているときは最新版を取りにいき、次回起動時から新しい版になる */
-const CACHE='naita-bashuki-20261010014029';
+const CACHE='naita-bashuki-20261010160749';
 const CORE=['./','./index.html','./manifest.webmanifest',"apple-touch-icon.png", "favicon-32.png", "icon-192.png", "icon-512.png", "icon-maskable-512.png"];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()));

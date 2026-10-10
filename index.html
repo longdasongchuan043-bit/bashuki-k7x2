@@ -98,6 +98,8 @@ header{
 .paper-mini{border-left:3px solid var(--line);padding:4px 8px;margin:6px 0;font-size:12px;}.paper-mini.win{border-left-color:var(--gold);}
 .paper-mini small,.letter-mini small{display:block;color:var(--text-dim);font-size:10.5px;}
 .letter-mini{font-size:12px;padding:5px 8px;margin:6px 0;background:rgba(242,156,184,.08);border-radius:4px;}
+.circuit-pick{margin:4px 0 10px;}.circuit-row{display:flex;gap:8px;}.circuit-row .ctl-btn{flex:1;padding:9px 6px;font-size:13px;}
+.circuit-note{font-size:11.5px;color:var(--text-dim);margin-top:6px;line-height:1.5;}
 .advice-box{margin:6px 0;padding:6px 8px;border:1px dashed var(--line);border-radius:4px;font-size:11.5px;background:rgba(255,255,255,.03);text-align:left;}
 .advice-box.empty{color:var(--text-dim);}
 .adv+.adv{margin-top:5px;border-top:1px dotted var(--line);padding-top:5px;}
@@ -577,6 +579,8 @@ const GRADE_RACES=[
   {name:"JBCスプリント",tier:"JpnI",month:11},
   {name:"マイルチャンピオンシップ南部杯",tier:"JpnI",month:9},
   {name:"東京大賞典",tier:"JpnI",month:12},
+  {name:"全日本2歳優駿",tier:"JpnI",month:12,age2:true},
+  {name:"JBC2歳優駿",tier:"JpnIII",month:11,age2:true},
   {name:"川崎記念",tier:"JpnI",month:4},
   {name:"帝王賞",tier:"JpnI",month:7},
   {name:"かしわ記念",tier:"JpnI",month:5},
@@ -630,6 +634,10 @@ const JRA_TURF_RACES=[
   {name:"スプリンターズステークス",tier:"JRA・G1",month:10},
   {name:"京都金杯",tier:"JRA・G3",month:1},
   {name:"中山金杯",tier:"JRA・G3",month:1},
+  // 2歳限定のG1
+  {name:"阪神ジュベナイルフィリーズ",tier:"JRA・G1",month:12,age2:true,sex:"牝"},
+  {name:"朝日杯フューチュリティステークス",tier:"JRA・G1",month:12,age2:true},
+  {name:"ホープフルステークス",tier:"JRA・G1",month:12,age2:true},
 ];
 // 世界的な芝の祭典をモデルにした海外芝遠征レース
 const OVERSEAS_TURF_RACES=[
@@ -663,8 +671,8 @@ const TRAINERS=[
   {key:'t5',name:'榊原 玲子',stable:'榊原厩舎',  skill:3,spec:'balanced',fee:18000,cap:6,minAvg:0, desc:'バランス重視で堅実。馬の状態管理がていねい。'},
   {key:'t6',name:'田所 平太',stable:'田所厩舎',  skill:2,spec:'balanced',fee:11000,cap:8,minAvg:0, desc:'開業まもない小さな厩舎。預託料が安く枠にも余裕。'},
   // 中央(JRA)・他地区の厩舎(架空)。移籍したときだけ選べる
-  {key:'tj1',name:'久世 恭平',stable:'美浦・久世厩舎',skill:4,spec:'balanced',fee:150000,cap:6,minAvg:0,region:'jra',desc:'美浦トレセンの中堅厩舎。地方からの転入馬の扱いに慣れている。'},
-  {key:'tj2',name:'矢野 誠',  stable:'栗東・矢野厩舎',skill:5,spec:'speed',   fee:170000,cap:5,minAvg:0,region:'jra',desc:'栗東の名門。坂路でスピードを磨く。'},
+  {key:'tj1',name:'久世 恭平',stable:'美浦・久世厩舎',skill:4,spec:'balanced',fee:60000,cap:6,minAvg:0,region:'jra',desc:'美浦トレセンの中堅厩舎。地方からの転入馬の扱いに慣れている。'},
+  {key:'tj2',name:'矢野 誠',  stable:'栗東・矢野厩舎',skill:5,spec:'speed',   fee:70000,cap:5,minAvg:0,region:'jra',desc:'栗東の名門。坂路でスピードを磨く。'},
   {key:'th1',name:'北村 武',  stable:'門別・北村厩舎',skill:3,spec:'balanced',fee:9000,cap:8,minAvg:0,region:'hokkaido',desc:'門別の育成上手。'},
   {key:'ti1',name:'菅原 剛',  stable:'水沢・菅原厩舎',skill:3,spec:'stamina', fee:7000,cap:8,minAvg:0,region:'iwate',desc:'岩手の古豪。じっくり使う。'},
   {key:'ta1',name:'服部 克己',stable:'名古屋・服部厩舎',skill:3,spec:'speed', fee:9000,cap:8,minAvg:0,region:'aichi',desc:'東海の中堅厩舎。'},
@@ -1352,6 +1360,7 @@ function crossLabel(c){
    ウイニングポストの「親系統/子系統」の考え方にならい、現代(2020年代)の分類で判定する。
    父→父の父→…と父系をさかのぼり、最初に当たった系統の祖を小系統、その祖が属する親系統を大系統とする。 */
 const LINE_FOUNDERS={
+  'Bois Roussel':['セントサイモン系','ボワルセル系'],
   'ディープインパクト':['サンデーサイレンス系','ディープインパクト系'],
   'サンデーサイレンス':['サンデーサイレンス系','サンデーサイレンス系'],
   'Halo':['ヘイルトゥリーズン系','ヘイロー系'],
@@ -1482,6 +1491,7 @@ const VENUES={
 };
 /* 実際の開催場と距離(JBCは持ち回りのためゲームでは大井開催とする) */
 const RACE_INFO={
+  '阪神ジュベナイルフィリーズ':['hanshin',1600],'朝日杯フューチュリティステークス':['hanshin',1600],'ホープフルステークス':['nakayama',2000],'全日本2歳優駿':['kawasaki',1600],'JBC2歳優駿':['monbetsu',1800],
   '東京大賞典':['ooi',2000],'川崎記念':['kawasaki',2100],'帝王賞':['ooi',2000],'かしわ記念':['funabashi',1600],
   'ダイオライト記念':['funabashi',2400],'名古屋大賞典':['nagoya',2000],'エンプレス杯':['kawasaki',2100],'浦和記念':['urawa',2000],
   'スパーキングレディーカップ':['kawasaki',1600],'クイーン賞':['funabashi',1800],'東京シティ・カップ':['ooi',1600],'サンタアニタトロフィー':['ooi',1600],
@@ -1665,7 +1675,7 @@ function applySave(d){
   S=d.S;STABLE_CAP=d.STABLE_CAP||6;raceViewMode=d.raceViewMode||'normal';
   ['retired','pendingAdmissions','mixSaleMarket','secondSaleMarket','summerSaleMarket','mixLeftover','feats','npcHall'].forEach(k=>{if(!S[k]) S[k]=[];});
   if(!S.records) S.records={};
-  ensureRep();if(!S.supporters)S.supporters={};if(!S.secondCareers)S.secondCareers=[];if(!S.homebreds)S.homebreds=[];registerAllOwnPeds();if(!S.mareSaleMarket)S.mareSaleMarket=[];S.horses.forEach(h=>{if(!h.growth)h.growth=pickGrowth(h.sireName);});
+  ensureRep();if(!S.supporters)S.supporters={};if(!S.secondCareers)S.secondCareers=[];if(!S.homebreds)S.homebreds=[];registerAllOwnPeds();if(!S.mareSaleMarket)S.mareSaleMarket=[];S.horses.forEach(h=>{if(!h.growth)h.growth=pickGrowth(h.sireName);if(h.region==='jra'&&!h.jraV2){h.jraBase=(h.jraBase||0)+1;h.jraV2=true;h.fromLocal=true;if(h.jraRaces==null)h.jraRaces=1;}});
   ensureNpcWorld();
 }
 function resumeAfterLoad(){
@@ -1773,7 +1783,7 @@ function renderWeekPlan(){
   }
   return box;
 }
-const FILLY_ONLY=['スパーキングレディーカップ','エンプレス杯','クイーン賞'];
+const FILLY_ONLY=['スパーキングレディーカップ','エンプレス杯','クイーン賞','阪神ジュベナイルフィリーズ'];
 function eligibleRacesFor(h){
   const hs=horseSub(h);
   const out=[];
@@ -1781,7 +1791,7 @@ function eligibleRacesFor(h){
     let ok;
     if(r.req){ // 三冠路線:年齢・性別・実績で出走可否
       const a=r.req.age;
-      ok=(a==='3'?h.age===3:a==='4+'?h.age>=4:h.age>=3)&&(!r.req.sex||h.sex===r.req.sex)&&h.wins>=r.req.min;
+      ok=(a==='2'?h.age===2:a==='3'?h.age===3:a==='4+'?h.age>=4:h.age>=3)&&(!r.req.sex||h.sex===r.req.sex)&&h.wins>=r.req.min;
     }
     else if(r.classKey==='中央L') ok=h.wins>=3; // 地方馬は3勝以上で中央リステッドに出走可
     else if(r.classKey==='中央'||r.classKey==='中央芝') ok=wonJraListed(h); // 中央の重賞は、中央リステッドを勝った地方馬だけ
@@ -1790,6 +1800,7 @@ function eligibleRacesFor(h){
     else if(r.sub!=null) ok=r.sub===0?(h.races===0&&hs===0):(hs===0?r.sub===1:(r.sub===hs||r.sub===hs+1));
     else if(r.classKey==='重賞') ok=hs>=6;
     else ok=false;
+    if(ok&&h.age<=2&&!r.req&&r.sub==null&&!r.region&&['中央','中央芝','中央L','重賞','海外','海外芝','地方芝'].includes(r.classKey)) ok=false; // 2歳馬は古馬混合の重賞には出られない
     ok=regionEligible(h,r,ok);
     if(ok && FILLY_ONLY.some(n=>(r.name||'').includes(n)) && h.sex!=='牝') ok=false; // 牝馬限定戦
     if(ok){
@@ -2259,13 +2270,14 @@ function ensureNpcWorld(){
    ['jra',2,10],['jra',3,12],['jra',4,12],['jra',5,9],['jra',6,6],
    ['intl',3,8],['intl',4,9],['intl',5,7],['intl',6,4]].forEach(([c,a,k])=>{for(let i=0;i<k;i++) S.npcs.push(makeNpc(c,a,used));});
 }
-function npcPushHist(n,e){n.hist.push(e);if(n.hist.length>24) n.hist.shift();}
+function npcPushHist(n,e){n.hist.push(e);if(n.hist.length>36) n.hist.shift();}
 /* レースの出走馬をNPCから選ぶ(条件に合う馬を、力の近い順に少しランダムに) */
 function npcEligible(n,r){
   if(n.rest>0||n.age<2) return false;
-  if(r.req){const a=r.req.age;if(a==='3'&&n.age!==3) return false;if(a==='4+'&&n.age<4) return false;if(a==='3+'&&n.age<3) return false;if(r.req.sex&&n.sex!==r.req.sex) return false;}
+  if(r.req){const a=r.req.age;if(a==='2'&&n.age!==2) return false;if(a!=='2'&&n.age<3) return false;if(a==='3'&&n.age!==3) return false;if(a==='4+'&&n.age<4) return false;if(a==='3+'&&n.age<3) return false;if(r.req.sex&&n.sex!==r.req.sex) return false;}
   if(typeof FILLY_ONLY!=='undefined'&&FILLY_ONLY.some(x=>(r.name||'').includes(x))&&n.sex!=='牝') return false;
   const ck=r.classKey;
+  if(!r.req&&n.age<=2&&['中央','中央芝','中央L','重賞','海外','海外芝','地方芝'].includes(ck)) return false; // 2歳は古馬混合の重賞に出ない
   const ovs=['meydan','kaa','gulfstream','delmar','longchamp','ascot','mooneevalley','shatin','churchill','pimlico','saratoga'].includes(r.venue);
   if(ovs) return n.cat==='intl'||(n.cat==='jra'&&npcPower(n)>=128);
   if(/ジャパンカップ/.test(r.name||'')) return n.cat==='jra'||(n.cat==='intl'&&n.turf>=70); // 国際招待
@@ -2294,7 +2306,7 @@ function pickNpcField(r,count,exclude){
   const used=npcUsedNames();
   while(out.length<count){ // 足りなければ、このクラスに合う新しい馬が登場
     const cat=['meydan','kaa','gulfstream','delmar','longchamp','ascot','mooneevalley','shatin','churchill','pimlico','saratoga'].includes(r.venue)?'intl':(['中央','中央芝','中央L'].includes(r.classKey)||(r.classKey==='三冠'&&r.surface==='turf'))?'jra':'local';
-    const age=r.req&&r.req.age==='3'?3:r.req&&r.req.age==='4+'?randInt(4,6):randInt(3,5);
+    const age=r.req&&r.req.age==='2'?2:r.req&&r.req.age==='3'?3:r.req&&r.req.age==='4+'?randInt(4,6):randInt(3,5);
     const n=makeNpc(cat,age,used);
     if(r.req&&r.req.sex) n.sex=r.req.sex;
     n.potential=Math.round(r.baseline/((NPC_GROWTH[n.growth])[age]||1)+randInt(-10,10));
@@ -2343,15 +2355,21 @@ function npcWeekly(simulatedIds,report){
   // 重賞・G1(プレイヤーが出走しなかったレース)の勝ち馬を決める
   S.weekRaces.forEach(r=>{
     if(!(r.grade||r.crownRace)||r._simulated) return;
-    const pool=S.npcs.filter(n=>!simulatedIds.has(n.id)&&npcEligible(n,r));
-    if(pool.length<3) return;
-    const w=pool.map(n=>Math.exp((npcPower(n)+randInt(-8,8))/11)); // 実力上位が勝ちやすいが、毎回同じ馬にはならない
-    let x=Math.random()*w.reduce((a,b)=>a+b,0),win=pool[0];
-    for(let i=0;i<pool.length;i++){x-=w[i];if(x<=0){win=pool[i];break;}}
-    win.races++;win.wins++;win.top3++;win.graded++;
+    // 出走馬が足りなければ、条件に合う新しい馬が登録される(どの重賞・三冠レースも毎年必ず行われる)
+    const cnt=r.crownRace||isG1Grade(r.grade||'')?randInt(12,16):randInt(9,13);
+    const field=pickNpcField(r,cnt,simulatedIds);
+    if(!field.length) return;
+    // 実力+当日の出来で着順を決める(実力上位が勝ちやすいが、毎回同じ馬にはならない)
+    const scored=field.map(n=>{const surf=r.surface==='turf'?(0.7+0.3*n.turf/100)/0.94:(0.85+0.15*n.dirt/100)/0.97;
+      const g=-Math.log(-Math.log(Math.random()+1e-12));
+      return {n,v:npcPower(n)*surf+mudPowerAdj(npcMud(n),r)+11*g};}).sort((a,b)=>b.v-a.v);
+    scored.forEach((x,i)=>{const n=x.n,rank=i+1;
+      n.races++;if(rank<=3)n.top3++;
+      npcPushHist(n,{week:S.week,race:r.name,rank,n:field.length});
+      simulatedIds.add(n.id);n.rest=rank===1?randInt(3,5):randInt(2,4);});
+    const win=scored[0].n;
+    win.wins++;win.graded++;
     if(isG1Grade(r.grade||'')) win.g1++;
-    npcPushHist(win,{week:S.week,race:r.name,rank:1,n:pool.length});
-    simulatedIds.add(win.id);win.rest=randInt(3,5);
     if(isG1Grade(r.grade||'')||r.crownRace){
       addNews(`🏇 ${shortRaceName(r.name).replace(/\((JRA|Jpn|海外|SI|S1|M1|M2|準重賞)[^)]*\)$/,'')}は${win.name}(${NPC_CAT_LABEL[win.cat]}・${win.sex}${win.age})が制した。${win.g1>1?`G1級${win.g1}勝目。`:''}`,'');
       npcCrownCheck(win,r,report);
@@ -2524,7 +2542,8 @@ function horseMarkHtml(f,r){
   const jra=JRA_VENUES.includes(v);
   const m=[];
   if(f.isPlayer){
-    if(jra) m.push(f.horse&&horseRegion(f.horse)==='jra'?['[地]','地方競馬出身のJRA所属馬']:['(地)','地方競馬所属馬']);
+    if(jra&&!(f.horse&&horseRegion(f.horse)==='jra')) m.push(['(地)','地方競馬所属馬']);
+    else if(jra&&f.horse.fromLocal) m.push(['[地]','地方競馬出身のJRA所属馬']);
     if(f.horse&&f.horse.foreignBred) m.push(['(外)','外国産馬']);
   } else if(f.npc){
     const n=f.npc;
@@ -2672,7 +2691,7 @@ function adjustRep(dRep,dFans,reason){
   }
 }
 function repLabel(v){return v>=80?'名馬主':v>=65?'信頼される馬主':v>=45?'普通':v>=30?'評判いまひとつ':'悪評';}
-const TRAINER_REP_REQ={t1:65,t2:45,t3:45};
+const TRAINER_REP_REQ={t1:65,t2:45,t3:45,tj2:60};
 const JOCKEY_REP_REQ=j=>j.skill>=5?{rep:60,fans:55}:j.skill>=4?{rep:45,fans:40}:null;
 /* リーディング級の騎手は、評判かファン満足度のどちらかが基準に届けば乗ってくれる(配偶者は別) */
 function jockeyAvailable(j){
@@ -3466,6 +3485,8 @@ const REGIONS={
   jra:{name:'中央(JRA)',venue:'tokyo',prize:1,bl:0,desc:'最高峰の舞台。賞金は桁違いだが、預託料も高く相手も強い。'},
 };
 const JRA_CLASSES=[
+  {k:'新馬',bl:72,prize:[2000000,800000,500000]},
+  {k:'未勝利',bl:78,prize:[1800000,700000,450000]},
   {k:'1勝クラス',bl:88,prize:[2800000,1100000,700000]},
   {k:'2勝クラス',bl:96,prize:[3500000,1400000,900000]},
   {k:'3勝クラス',bl:104,prize:[4500000,1800000,1100000]},
@@ -3476,7 +3497,13 @@ const JRA_VENUE_BY_MONTH={1:['nakayama','kyoto'],2:['tokyo','kyoto'],3:['nakayam
 function wonJraListed(h){return (h.history||[]).some(x=>x.rank===1&&/\(L/.test(x.raceName||''));}
 function horseRegion(h){return (h&&h.region)||'minami';}
 function regionOpen(key,month){const R=REGIONS[key];return !(R&&R.closed&&R.closed.includes(month));}
-function jraClassOf(h){return clamp((h.jraBase||0)+(h.jraWins||0),0,3);}
+// 中央のクラス:未出走は新馬、未勝利、以降は勝ち星(移籍馬は格付けぶんを加算)で1勝クラス→2勝→3勝→オープン
+function jraClassOf(h){const lv=(h.jraBase||0)+(h.jraWins||0);if(lv<=0) return (h.jraRaces||0)>0?1:0;return Math.min(5,lv+1);}
+function setJraDebut(h){h.region='jra';h.jraBase=0;h.jraWins=0;h.jraRaces=0;h.jraV2=true;h.fromLocal=false;}
+function ensureRegionRacesNow(k){
+  const add=regionRaces(S.week).filter(r=>r.region===k&&!S.weekRaces.some(x=>x.name===r.name&&x.region===k));
+  add.forEach(r=>{setRaceConditions(r);r.grade=gradeOfRace(r);S.weekRaces.push(r);});
+}
 function regionRaces(week){
   const month=calendarParts(week).month;
   const regs=[...new Set((S&&S.horses||[]).map(horseRegion))].filter(k=>k!=='minami');
@@ -3486,6 +3513,7 @@ function regionRaces(week){
     if(k==='jra'){
       const vs=JRA_VENUE_BY_MONTH[month];
       JRA_CLASSES.forEach((c,i)=>{['dirt','turf'].forEach((sf,j)=>{
+        if(i===0&&(month===4||month===5)) return; // 2歳新馬戦は6月に始まり、翌3月まで
         const dists=sf==='dirt'?[1200,1400,1600,1800]:[1200,1600,1800,2000,2400];
         out.push({classKey:'中央',region:'jra',jraClass:i,name:`🇯🇵 ${c.k}(${sf==='turf'?'芝':'ダ'})`,baseline:c.bl,entryFee:0,travelFee:0,surface:sf,
           prize:c.prize.slice(),venue:vs[(i+j)%2],dist:pickFrom(dists)});
@@ -3507,11 +3535,17 @@ function regionEligible(h,r,baseOk){
   const reg=horseRegion(h);
   if(reg==='jra'){
     const jc=jraClassOf(h);
-    if(r.region==='jra') return r.jraClass===jc||r.jraClass===jc+1;
-    if(r.classKey==='中央'||r.classKey==='中央芝'||r.classKey==='中央L') return jc>=3;
-    if(r.classKey==='海外'||r.classKey==='海外芝') return jc>=3&&h.wins>=6;
-    if(r.classKey==='三冠') return baseOk&&/JRA|中央|🇯🇵|🇺🇸/.test(r.name);
-    if(r.classKey==='重賞') return jc>=3&&/Jpn/.test(r.name);
+    if(r.req&&r.req.age==='2') return baseOk; // 2歳限定の重賞・G1
+    if(r.region==='jra'){const rc=r.jraClass;
+      if(h.age<=2&&calendarParts(S.week).month<6) return false; // 2歳馬のデビューは6月の新馬戦から
+      if(jc===0) return rc===0||rc===1;   // 未出走:新馬戦か未勝利戦
+      if(jc===1) return rc===1;           // 未勝利の馬は未勝利戦だけ
+      return rc===jc||rc===jc+1;}         // 同じクラスか、1つ上(格上挑戦)
+    if(r.classKey==='中央'||r.classKey==='中央芝') return jc>=4; // 重賞は3勝クラス以上(格上挑戦含む)
+    if(r.classKey==='中央L') return jc>=4;
+    if(r.classKey==='海外'||r.classKey==='海外芝') return jc>=5&&h.wins>=4;
+    if(r.classKey==='三冠') return /JRA|中央|🇯🇵|🇺🇸/.test(r.name)&&(baseOk||(jc>=3&&r.req&&(r.req.age!=='3'||h.age===3)&&(!r.req.sex||h.sex===r.req.sex)));
+    if(r.classKey==='重賞') return jc>=5&&/Jpn/.test(r.name);
     return false;
   }
   if(r.region==='jra') return false;
@@ -3543,7 +3577,7 @@ function doTransfer(h,k,fee){
   h.region=k==='minami'?undefined:k;
   if(k==='jra'){
     const hs=horseSub(h),g=gradeSummary(h);
-    h.jraBase=g.g1>=1?3:g.graded>=2||hs>=8?2:1;h.jraWins=0;
+    h.jraBase=g.g1>=1?4:g.graded>=2||hs>=8?3:2;h.jraWins=0;h.jraRaces=1;h.jraV2=true;h.fromLocal=true;
   }
   // 所属が変わるので厩舎も移る
   h.trainerKey=null;h.pendingAction=null;
@@ -3687,7 +3721,7 @@ function yearEndAwards(report){
   const pushP=(h,cur)=>{const hs=(h.history||[]).filter(x=>inYear(x.week));if(!hs.length)return;
     cands.push({name:h.name,age:h.age,sex:h.sex,player:true,score:hs.reduce((a,x)=>a+raceScore(x.raceName,x.rank),0),wins:hs.filter(x=>x.rank===1).length,
       big:hs.filter(x=>x.rank===1&&raceScore(x.raceName,1)>=4).map(x=>shortRaceName(x.raceName)),prize:hs.reduce((a,x)=>a+(x.prize||0),0)*(cur?shareOf(h):1)});};
-  S.horses.forEach(h=>pushP(h,true));
+  S.horses.filter(h=>horseRegion(h)!=='jra').forEach(h=>pushP(h,true));
   (S.retired||[]).filter(r=>r.soldYear===yi||r.soldYear===yi+1).forEach(r=>pushP(r,false));
   (S.npcs||[]).filter(n=>n.cat==='local').forEach(n=>{const hs=n.hist.filter(x=>inYear(x.week));if(!hs.length)return;
     cands.push({name:n.name,age:n.age,sex:n.sex,player:false,npc:n,score:hs.reduce((a,x)=>a+raceScore(x.race,x.rank),0),wins:hs.filter(x=>x.rank===1).length,
@@ -3704,15 +3738,17 @@ function yearEndAwards(report){
   const lines=[];let mine=0;
   cats.forEach(([cat,f])=>{
     const w=best(f);if(!w||w.score<1) return;
-    S.awards.push({y:yi,cat,name:w.name,player:w.player,big:w.big.slice(0,3)});
+    S.awards.push({y:yi,org:'nar',cat,name:w.name,player:w.player,big:w.big.slice(0,3)});
     lines.push(`<b>${cat}</b>:${w.player?'🏆 ':''}${w.name}${w.player?'(あなたの馬)':''}${w.big.length?` — ${w.big.slice(0,3).join('・')}`:` — ${w.wins}勝`}`);
     if(w.player){mine++;adjustRep(cat==='年度代表馬'?3:1,cat==='年度代表馬'?8:3,`${w.name}:${cat}を受賞`);
       if(cat==='年度代表馬') addFeat(report,{title:`${w.name}、開業${yi}年目の年度代表馬に!`,body:`${w.big.length?w.big.join('・')+'を制した':'年間'+w.wins+'勝の'}${w.name}が、地方競馬の年度代表馬に選ばれた。`});}
   });
+  jraAwards(report,yi,inYear);
   // 馬主リーディング
   const owners=NPC_OWNERS.map(n=>({name:n,prize:0,wins:0}));
   cands.filter(c=>!c.player).forEach(c=>{const o=owners.find(x=>x.name===c.npc.owner)||owners[0];o.prize+=c.prize;o.wins+=c.wins;});
-  const me={name:S.ownerName||'あなた',prize:cands.filter(c=>c.player).reduce((a,c)=>a+c.prize,0),wins:cands.filter(c=>c.player).reduce((a,c)=>a+c.wins,0),me:true};
+  const jraMine=S.horses.filter(h=>horseRegion(h)==='jra').map(h=>(h.history||[]).filter(x=>inYear(x.week)));
+  const me={name:S.ownerName||'あなた',prize:cands.filter(c=>c.player).reduce((a,c)=>a+c.prize,0)+jraMine.reduce((a,hs)=>a+hs.reduce((b,x)=>b+(x.prize||0),0),0),wins:cands.filter(c=>c.player).reduce((a,c)=>a+c.wins,0)+jraMine.reduce((a,hs)=>a+hs.filter(x=>x.rank===1).length,0),me:true};
   const table=[...owners,me].sort((a,b)=>b.prize-a.prize);
   const rank=table.indexOf(me)+1;
   if(!S.ownerRanks) S.ownerRanks=[];
@@ -3720,17 +3756,61 @@ function yearEndAwards(report){
   if(rank===1){adjustRep(3,6,`馬主リーディング1位`);addFeat(report,{title:`開業${yi}年目の馬主リーディング1位!`,body:`獲得賞金${yen(me.prize)}・${me.wins}勝で、地方競馬の馬主リーディングの頂点に立った。`});}
   else if(rank<=3) adjustRep(1,3,`馬主リーディング${rank}位`);
   const top=table.slice(0,5).map((o,i)=>`${i+1}位 ${o.me?'<b>'+o.name+'</b>':o.name} ${yen(Math.round(o.prize))}(${o.wins}勝)`).join('<br>');
-  report.push({type:'notice',text:`🏅 開業${yi}年目 年度表彰(NARグランプリ)<br>${lines.join('<br>')||'該当馬なし'}<br><br>📊 馬主リーディング(獲得賞金)<br>${top}${rank>5?`<br>…${rank}位 <b>${me.name}</b> ${yen(me.prize)}(${me.wins}勝)`:''}`});
+  report.push({type:'notice',text:`🏅 開業${yi}年目 NARグランプリ(地方競馬の年度表彰)<br>${lines.join('<br>')||'該当馬なし'}<br><br>📊 馬主リーディング(獲得賞金)<br>${top}${rank>5?`<br>…${rank}位 <b>${me.name}</b> ${yen(me.prize)}(${me.wins}勝)`:''}`});
 }
+/* ---- JRA賞(中央の年度表彰) ----
+   実際のJRA賞にならい、中央のレースでの成績から年度代表馬と部門別の最優秀馬を選ぶ。 */
+function isJraRaceName(n){return /JRA・G|🇯🇵|\(L|クラス\(|新馬\(|未勝利\(|中央オープン/.test(n||'');}
+const JRA_SPRINT=/スプリンターズ|高松宮|安田記念|マイルチャンピオンシップ(?!南部杯)|ヴィクトリアマイル|NHKマイル/;
+function jraAwards(report,yi,inYear){
+  const cands=[];
+  const jScore=(name,rank)=>isJraRaceName(name)?raceScore(name,rank):0;
+  const dirtScore=(name,rank)=>(/JRA・G|Jpn/.test(name||'')&&!/芝/.test(name||''))?raceScore(name,rank):0;
+  const sprintScore=(name,rank)=>JRA_SPRINT.test(name||'')?raceScore(name,rank):0;
+  const add=(o,hs,key,player)=>{
+    const sc=hs.reduce((a,x)=>a+jScore(x[key],x.rank),0);
+    const ds=hs.reduce((a,x)=>a+dirtScore(x[key],x.rank),0);
+    const ss=hs.reduce((a,x)=>a+sprintScore(x[key],x.rank),0);
+    if(sc<=0&&ds<=0) return;
+    const m={};hs.filter(x=>x.rank===1&&(jScore(x[key],1)>=4||dirtScore(x[key],1)>=4)).forEach(x=>{const k=shortRaceName(x[key]);m[k]=(m[k]||0)+1;});
+    cands.push({name:o.name,age:o.age,sex:o.sex,player,score:sc,dirt:ds,sprint:ss,wins:hs.filter(x=>x.rank===1&&isJraRaceName(x[key])).length,
+      big:Object.entries(m).map(([k,v])=>v>1?`${k}×${v}`:k)});
+  };
+  S.horses.forEach(h=>add(h,(h.history||[]).filter(x=>inYear(x.week)),'raceName',true));
+  (S.retired||[]).filter(r=>r.soldYear===yi||r.soldYear===yi+1).forEach(r=>add(r,(r.history||[]).filter(x=>inYear(x.week)),'raceName',true));
+  (S.npcs||[]).filter(n=>n.cat==='jra').forEach(n=>add(n,n.hist.filter(x=>inYear(x.week)),'race',false));
+  const best=(f,k)=>cands.filter(f).sort((a,b)=>b[k||'score']-a[k||'score'])[0];
+  const cats=[
+    ['年度代表馬',c=>c.score>=6,'score'],
+    ['最優秀2歳牡馬',c=>c.age===2&&c.sex!=='牝'],['最優秀2歳牝馬',c=>c.age===2&&c.sex==='牝'],
+    ['最優秀3歳牡馬',c=>c.age===3&&c.sex!=='牝'],['最優秀3歳牝馬',c=>c.age===3&&c.sex==='牝'],
+    ['最優秀4歳以上牡馬',c=>c.age>=4&&c.sex!=='牝'],['最優秀4歳以上牝馬',c=>c.age>=4&&c.sex==='牝'],
+    ['最優秀短距離馬',c=>c.sprint>=4,'sprint'],['最優秀ダートホース',c=>c.dirt>=4,'dirt'],
+  ];
+  const lines=[];
+  cats.forEach(([cat,f,k])=>{
+    const w=best(f,k);if(!w||w[k||'score']<1) return;
+    S.awards.push({y:yi,org:'jra',cat,name:w.name,player:w.player,big:w.big.slice(0,3)});
+    lines.push(`<b>${cat}</b>:${w.player?'🏆 ':''}${w.name}${w.player?'(あなたの馬)':''}${w.big.length?` — ${w.big.slice(0,3).join('・')}`:` — 中央${w.wins}勝`}`);
+    if(w.player){adjustRep(cat==='年度代表馬'?4:2,cat==='年度代表馬'?12:5,`${w.name}:JRA賞${cat}を受賞`);
+      if(cat==='年度代表馬') addFeat(report,{title:`${w.name}、JRA賞年度代表馬に!`,body:`${w.big.length?w.big.join('・')+'を制した':''}${w.name}が、中央競馬の頂点・JRA賞年度代表馬に選ばれた。`});
+      else addFeat(report,{title:`${w.name}、JRA賞${cat}を受賞`,body:`開業${yi}年目のJRA賞で${cat}に選ばれた。`});}
+  });
+  report.push({type:'notice',text:`🇯🇵 開業${yi}年目 JRA賞(中央競馬の年度表彰)<br>${lines.join('<br>')||'該当馬なし'}`});
+}
+
 function renderAwardsBoard(){
-  const box=el(`<div class="crown-board"><div class="sec-h">🏅 年度表彰・馬主リーディング</div></div>`);
+  const box=el(`<div class="crown-board"><div class="sec-h">🏅 年度表彰(NARグランプリ・JRA賞)・馬主リーディング</div></div>`);
   const ys=[...new Set((S.awards||[]).map(a=>a.y).concat((S.ownerRanks||[]).map(r=>r.y)))].sort((a,b)=>b-a).slice(0,5);
   if(!ys.length){box.appendChild(el(`<div class="plan-empty">年が明けると、前の年の年度代表馬・部門別の最優秀馬と馬主リーディングが発表されます。</div>`));return box;}
   ys.forEach(y=>{
     const aw=(S.awards||[]).filter(a=>a.y===y);
     const or=(S.ownerRanks||[]).find(r=>r.y===y);
-    box.appendChild(el(`<div class="cb-row"><div class="cb-name">開業${y}年目<small>${or?`馬主リーディング ${or.rank}位(${yen(or.prize)})`:''}</small></div>
-      <div class="cb-races">${aw.map(a=>`<div class="cb-race ${a.player?'won':''}"><b>${a.cat}</b><span>${a.player?'🏆 ':''}${a.name}</span></div>`).join('')}</div></div>`));
+    const cell=a=>`<div class="cb-race ${a.player?'won':''}"><b>${a.cat}</b><span>${a.player?'🏆 ':''}${a.name}</span></div>`;
+    const nar=aw.filter(a=>a.org!=='jra'),jra=aw.filter(a=>a.org==='jra');
+    box.appendChild(el(`<div class="cb-row"><div class="cb-name">開業${y}年目 NARグランプリ<small>${or?`馬主リーディング ${or.rank}位(${yen(or.prize)})`:''}</small></div>
+      <div class="cb-races">${nar.map(cell).join('')}</div></div>`));
+    if(jra.length) box.appendChild(el(`<div class="cb-row"><div class="cb-name">開業${y}年目 JRA賞<small>中央競馬の年度表彰</small></div><div class="cb-races">${jra.map(cell).join('')}</div></div>`));
   });
   return box;
 }
@@ -4426,7 +4506,8 @@ function pickWeekRacesRaw(week){
         entryFee:Math.round(c.entryFee*mult),
         travelFee:0,
         surface:'dirt',
-        prize:c.prize.map(p=>Math.round(p*mult))
+        prize:c.prize.map(p=>Math.round(p*mult)),
+        req:g.age2?{age:'2',sex:g.sex||null,min:1}:undefined
       };
     }
   })];
@@ -4479,7 +4560,8 @@ function pickWeekRacesRaw(week){
       entryFee:isG1?90000:55000,
       travelFee:220000,
       surface:'turf',
-      prize:isG1?[18000000,6000000,2500000]:[9000000,3300000,1400000]
+      prize:isG1?[18000000,6000000,2500000]:[9000000,3300000,1400000],
+      req:g.age2?{age:'2',sex:g.sex||null,min:1}:undefined
     });
   });
   // 海外芝挑戦。世界最高峰の芝の祭典。史実の開催月のみ。
@@ -4540,6 +4622,31 @@ function makeGodHorse(){
   return h;
 }
 
+/* オーナー権限の1歳馬「エンペラー」。父ミホシンザン(三冠馬シンザンの代表産駒・皐月賞・菊花賞・天皇賞(春))。
+   母は架空のエンプレスローズ(母の父ノーザンテースト。ミホシンザンと同じ時代に繁殖の主流だった血統)。 */
+(function(){
+  const add=(n,a,b)=>{if(!PED_DB[n])PED_DB[n]=[a,b];};
+  add('ミホシンザン','シンザン','ナポリジョオー');
+  add('シンザン','ヒンドスタン','ハヤノボリ');
+  add('ヒンドスタン','Bois Roussel','Sonibai');
+  add('Bois Roussel','Vatout','Plucky Liege');
+})();
+function makeEmperorHorse(){
+  const h=makeHorse(1,false);
+  h.sex='牡';h.age=1;
+  h.sireName='ミホシンザン';h.damName='エンプレスローズ';h.damSireName='ノーザンテースト';
+  h.damReal=false;
+  h.pedFict={mm:'ローズクイーン',mmf:'パーソロン',mmm:'ミスローズ',mmmf:'ネヴァービート',mmmm:'ハッピーローズ',mmmmf:'Hyperion',mmmmm:'ローズリーフ'};
+  h.speed=99;h.stamina=99;h.guts=99;h.turfApt=99;h.dirtApt=99;h.mudApt=95;
+  h.temper=12;h.frail=8;h.growth='long';h.condition=100;
+  h.ibApplied=true;h.inbreed=0;h.ibBonus={sp:0,st:0};
+  h.uniqueSkill='monster_legs';
+  h.title=assignTitle(h);h.runStyle=pickRunStyle(h.speed,h.stamina,h.guts);h.optDist=pickOptDist(h.speed,h.stamina);
+  h.pastHistory=null;h.history=[];h.wins=0;h.races=0;h.top3=0;
+  h.trainerKey=null;h.unnamed=true;h.presetName='エンペラー';h.name='エンペラー(1歳)';
+  h.price=0;
+  return h;
+}
 function startNewGame(){
   S=newGameState();
   ensureNpcWorld();
@@ -4555,6 +4662,10 @@ const CHEAT_CODES={
   'OWNERMAX':  {label:'所有馬の能力値を全てMAXに', apply:()=>{S.horses.forEach(h=>{h.speed=99;h.stamina=99;h.guts=99;});}},
   'OWNERHEAL': {label:'所有馬の状態を全回復',  apply:()=>{S.horses.forEach(h=>{h.condition=100;});}},
   'OWNERSLOT': {label:'厩舎の上限を+1',        apply:()=>{STABLE_CAP+=1;}},
+  'OWNEREMPEROR':{label:'1歳馬「エンペラー」(牡・父ミホシンザン・母エンプレスローズ)を育成牧場に追加(能力すべて最大。2歳の1月に入厩)',apply:()=>{
+    if(S.horses.length>=STABLE_CAP) STABLE_CAP+=1;
+    S.horses.push(makeEmperorHorse());
+  }},
   'OWNERGOD':  {label:'最強馬「ユメノサキヘ」(牡・父トキノミノル・母シラオキ)を厩舎に追加(全ステータス1000、芝・ダート適性MAX)', apply:()=>{
     if(S.horses.length>=STABLE_CAP) STABLE_CAP+=1;
     S.horses.push(makeGodHorse());
@@ -5045,7 +5156,8 @@ function advanceWeek(opts){
         injuryNotices.push(injuryText(h,inj,'race'));
       }
       if(f.rank<=3) h.top3+=1;
-      if(f.rank===1){h.wins+=1;if(r.region==='jra')h.jraWins=(h.jraWins||0)+1;adjustRep(0,isG1Grade(r.grade)?5:r.grade?2:0.5,isG1Grade(r.grade)?`${h.name}:${r.name}優勝`:r.grade?`${h.name}:重賞${r.name}優勝`:'');}
+      if(horseRegion(h)==='jra') h.jraRaces=(h.jraRaces||0)+1;
+      if(f.rank===1){h.wins+=1;if(horseRegion(h)==='jra')h.jraWins=(h.jraWins||0)+1;adjustRep(0,isG1Grade(r.grade)?5:r.grade?2:0.5,isG1Grade(r.grade)?`${h.name}:${r.name}優勝`:r.grade?`${h.name}:重賞${r.name}優勝`:'');}
       if(f.jockeyKey){
         const gain=3+(f.rank===1?5:f.rank<=3?2:0);
         S.jockeyAffection[f.jockeyKey]=clamp((S.jockeyAffection[f.jockeyKey]||0)+gain,0,100);
@@ -5798,7 +5910,7 @@ function startPendingAdmission(){
   while(S.pendingAdmissions.length>0){
     const id=S.pendingAdmissions.shift();
     const h=S.horses.find(x=>x.id===id);
-    if(h){admissionName='';openAdmission(h,'yearling');return true;}
+    if(h){admissionName=h.presetName||'';openAdmission(h,'yearling');return true;}
   }
   return false;
 }
@@ -5849,6 +5961,8 @@ function admitHorse(h,t){
     addNews(`${h.name}を${t.stable}(${t.name}調教師)に入厩させた。`,'');
   }
   h.trainerKey=t.key;
+  if(horseRegion(h)!=='minami') ensureRegionRacesNow(horseRegion(h));
+  if(horseRegion(h)==='jra'&&h.jraV2&&!h.fromLocal&&(h.jraRaces||0)===0&&admissionMode!=='transfer') addNews(`${h.name}は中央(JRA)の${t.stable}に入厩。中央でのデビューを目指す。`,'');
   admissionHorseId=null;
   toast(`${h.name}を${t.stable}に預けました`);
   if(!startPendingAdmission()) render();
@@ -5874,6 +5988,18 @@ function renderAdmissionModal(){
     box.appendChild(nb);
   }
 
+  if(['start','yearling'].includes(admissionMode)){
+    // 競走馬としての最初の入厩:地方(南関東)か中央(JRA)かを選ぶ
+    const isJ=horseRegion(h)==='jra';
+    const cw=el(`<div class="circuit-pick"><div class="sec-h">所属を選ぶ</div><div class="circuit-row"></div>
+      <div class="circuit-note">${isJ?'中央(JRA)でデビュー。賞金は高い(新馬戦1着200万円)が、預託料も週6〜7万円と高く、相手も強い。2歳の新馬戦は6月から。':'地方(南関東)でデビュー。預託料が安く、C3クラスから一歩ずつ。3勝すれば中央のリステッドにも挑める。'}</div></div>`);
+    [['minami','🏟 地方(南関東)'],['jra','🇯🇵 中央(JRA)']].forEach(([k,l])=>{
+      const b=el(`<button class="ctl-btn ${(isJ?'jra':'minami')===k?'active':''}">${l}</button>`);
+      b.onclick=()=>{if(k==='jra') setJraDebut(h); else {h.region=undefined;h.jraBase=0;h.jraWins=0;h.jraRaces=0;}render();};
+      cw.querySelector('.circuit-row').appendChild(b);
+    });
+    box.appendChild(cw);
+  }
   TRAINERS.filter(t=>(t.region||'minami')===horseRegion(h)).forEach(t=>{
     const used=trainerCount(t.key,h.id);
     const free=Math.max(0,t.cap-used);
