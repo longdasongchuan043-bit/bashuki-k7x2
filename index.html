@@ -7101,6 +7101,17 @@ function renderAdmissionModal(){
     input.value=admissionName;
     input.oninput=()=>{admissionName=input.value;nameErr.textContent='';};
     nb.querySelector('.name-rand').onclick=()=>{admissionName=randomShortName();input.value=admissionName;nameErr.textContent='';};
+    // 命名の前に血統表を見られるように(開くまで描かない)
+    const pedBtn=el(`<button class="ctl-btn ped-toggle" style="margin-top:6px;">📜 血統表を見る</button>`);
+    const pedBox=el(`<div style="display:none;"></div>`);
+    pedBtn.onclick=()=>{
+      if(!pedBox.hasChildNodes()) pedBox.appendChild(el(renderPedigreeHtml(h)));
+      const open=pedBox.style.display==='none';
+      pedBox.style.display=open?'block':'none';
+      pedBtn.textContent=open?'📜 血統表を閉じる':'📜 血統表を見る';
+    };
+    nb.appendChild(pedBtn);
+    nb.appendChild(pedBox);
     box.appendChild(nb);
   }
 
