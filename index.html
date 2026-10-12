@@ -2,29 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#141B36">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ナイター馬主記">
-<meta name="application-name" content="ナイター馬主記">
-<meta name="format-detection" content="telephone=no">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash-1290x2796.png">
-<link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash-1179x2556.png">
-<link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash-1284x2778.png">
-<link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash-1170x2532.png">
-<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash-1125x2436.png">
-<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash-1242x2688.png">
-<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash-828x1792.png">
-<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash-750x1334.png">
-<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash-1242x2208.png">
-<link rel="apple-touch-startup-image" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash-640x1136.png">
-
-<title>ナイター馬主記</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ナイター馬主記 - 地方競馬オーナーシミュレーション</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap');
 
@@ -576,14 +555,6 @@ main{flex:1;padding:14px 14px 100px;}
 .track.night::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 18% 12%,rgba(255,240,180,.28),transparent 28%),radial-gradient(circle at 82% 12%,rgba(255,240,180,.28),transparent 28%);}
 .lane-marker .horse-dot.run{animation:bobrun .32s ease-in-out infinite alternate;}
 @keyframes bobrun{from{transform:translateY(-1.5px);}to{transform:translateY(1.5px);}}
-
-/* ---- アプリ(ホーム画面から起動)用の調整 ---- */
-header{padding-top:calc(14px + env(safe-area-inset-top));}
-.tabs{top:calc(64px + env(safe-area-inset-top));}
-html,body{overscroll-behavior-y:none;}
-button,.tappable{touch-action:manipulation;}
-.modal-box{max-height:calc(100vh - env(safe-area-inset-top) - 12px);}
-@media (display-mode: standalone){body{-webkit-user-select:none;user-select:none;} input{-webkit-user-select:text;user-select:text;}}
 </style>
 </head>
 <body>
@@ -631,6 +602,8 @@ const OVERSEAS_RACES=[
   {name:"サウジカップ",tier:"海外・G1",month:2},
   {name:"ペガサスワールドカップ",tier:"海外・G1",month:1},
   {name:"ブリーダーズカップ・クラシック",tier:"海外・G1",month:11},
+  {name:"ブリーダーズカップ・スプリント",tier:"海外・G1",month:11},
+  {name:"ウィットニーステークス",tier:"海外・G1",month:8},
 ];
 
 // 地方競馬で唯一の芝コースを持つ盛岡競馬場の実在の芝重賞をモデルに(開催は例年6月末〜11月上旬)
@@ -667,12 +640,23 @@ const JRA_TURF_RACES=[
 ];
 // 世界的な芝の祭典をモデルにした海外芝遠征レース
 const OVERSEAS_TURF_RACES=[
-  {name:"凱旋門賞",tier:"海外・G1",month:10},
-  {name:"キングジョージ6世&クイーンエリザベスステークス",tier:"海外・G1",month:7},
   {name:"ブリーダーズカップ・ターフ",tier:"海外・G1",month:11},
   {name:"コックスプレート",tier:"海外・G1",month:10},
   {name:"ドバイターフ",tier:"海外・G1",month:3},
   {name:"香港カップ",tier:"海外・G1",month:12},
+  {name:"コーフィールドカップ",tier:"海外・G1",month:10},
+  {name:"メルボルンカップ",tier:"海外・G1",month:11},
+  {name:"プリンスオブウェールズステークス",tier:"海外・G1",month:6},
+  {name:"ドバイシーマクラシック",tier:"海外・G1",month:3},
+  {name:"香港マイル",tier:"海外・G1",month:12},
+  {name:"香港ヴァーズ",tier:"海外・G1",month:12},
+  {name:"香港ゴールドカップ",tier:"海外・G1",month:9},
+  {name:"ドンカスターマイル",tier:"海外・G1",month:3},
+  {name:"ゴールデンイーグル",tier:"海外・G1",month:5},
+  {name:"ブリーダーズカップ・マイル",tier:"海外・G1",month:11},
+  {name:"プリ・ド・ラバイ",tier:"海外・G1",month:10},
+  {name:"香港スプリント",tier:"海外・G1",month:12},
+  {name:"クイーンエリザベスII世カップ",tier:"海外・G1",month:4},
 ];
 
 const CLASSES=[
@@ -963,6 +947,7 @@ const STUD_STATIONS=[
   {key:'arrow',name:'アロースタッド',place:'北海道日高町',tier:'B',minScore:40,priceMult:0.8,mares:100,mareBonus:0.02,desc:'日高の中堅スタリオン。'},
   {key:'yushun',name:'優駿スタリオンステーション',place:'北海道',tier:'B',minScore:40,priceMult:0.8,mares:100,mareBonus:0.02,desc:'日高の中堅スタリオン。'},
   {key:'jbba',name:'日本軽種馬協会 静内種馬場',place:'北海道新ひだか町',tier:'C',minScore:28,priceMult:0.6,mares:70,mareBonus:0,desc:'生産地を支える公的な種馬場。'},
+ {key:'crack',name:'クラック・ステーブル',place:'北海道新冠町',tier:'C',minScore:30,priceMult:0.8,mares:60,mareBonus:0,desc:'地方馬の種付けが中心の小規模な種馬場。'},
 ];
 const BROODMARE_FARMS=[
   {key:'northern',name:'ノーザンファーム',place:'北海道安平町',tier:'S',minScore:85,priceMult:1.25,desc:'国内屈指の大手生産牧場。'},
@@ -1008,7 +993,7 @@ function retireToBreeding(h,kind,st,price){
   const g=gradeSummary(h);
   const score=studScore(h);
   const rec={id:uid(),kind,name:h.name,sex:h.sex,age:h.age,coat:h.coat,blaze:h.blaze,title:h.title,
-    sireName:h.sireName,damName:h.damName,damSireName:h.damSireName,pedFict:h.pedFict,damReal:!!h.damReal,fromId:h.id,growth:h.growth,mudApt:h.mudApt,tendon:tendonOf(h),
+    sireName:h.sireName,damName:h.damName,damSireName:h.damSireName,pedFict:h.pedFict,damReal:!!h.damReal,fromId:h.id,growth:h.growth,mudApt:h.mudApt,tendon:tendonOf(h),mutant:h.mutant||null,gene:geneOf(h),
     speed:h.speed,stamina:h.stamina,guts:h.guts,wins:h.wins,top3:h.top3,races:h.races,
     history:(h.history||[]).slice(),g1:g.g1,graded:g.graded,score,
     soldYear:yi,soldWeek:S.week,stationKey:st.key,stationName:st.name,place:st.place,price,
@@ -1558,6 +1543,10 @@ const VENUES={
   longchamp:{name:'パリロンシャン競馬場',dir:'R',turf:{L:2750,S:533},shape:'longchamp'},
   ascot:{name:'アスコット競馬場',dir:'R',turf:{L:2800,S:500},shape:'ascot'},
   mooneevalley:{name:'ムーニーバレー競馬場',dir:'L',turf:{L:1805,S:173}},
+  caulfield:{name:'コーフィールド競馬場',dir:'R',turf:{L:2410,S:400}},
+  flemington:{name:'フレミントン競馬場',dir:'L',turf:{L:2600,S:500}},
+  randwick:{name:'ランドウィック競馬場',dir:'R',turf:{L:2200,S:400}},
+  epsom:{name:'エプソム競馬場',dir:'L',turf:{L:2420,S:400}},
   shatin:{name:'シャティン競馬場',dir:'R',turf:{L:1900,S:430}},
   churchill:{name:'チャーチルダウンズ競馬場',dir:'L',dirt:{L:1609,S:376}},
   pimlico:{name:'ピムリコ競馬場',dir:'L',dirt:{L:1609,S:352}},
@@ -1577,6 +1566,11 @@ const RACE_INFO={
   '有馬記念':['nakayama',2500],'日本ダービー':['tokyo',2400],'天皇賞(秋)':['tokyo',2000],'ジャパンカップ':['tokyo',2400],'安田記念':['tokyo',1600],'宝塚記念':['hanshin',2200],
   'マイルチャンピオンシップ':['kyoto',1600],'スプリンターズステークス':['nakayama',1200],'京都金杯':['kyoto',1600],'中山金杯':['nakayama',2000],
   '凱旋門賞':['longchamp',2400],'キングジョージ6世&クイーンエリザベスステークス':['ascot',2400],'ブリーダーズカップ・ターフ':['delmar',2400],
+  'ウィットニーステークス':['saratoga',1800],'プリ・ド・ラバイ':['longchamp',1000],'香港スプリント':['shatin',1200],'クイーンエリザベスII世カップ':['shatin',2000],
+  'ブリーダーズカップ・スプリント':['delmar',1200],'プリンスオブウェールズステークス':['ascot',2000],'ドバイシーマクラシック':['meydan',2400],
+  '香港マイル':['shatin',1600],'ブリーダーズカップ・マイル':['delmar',1600],
+  'イギリスダービー':['epsom',2420],'香港ヴァーズ':['shatin',2400],'香港ゴールドカップ':['shatin',2000],'ドンカスターマイル':['randwick',1600],'ゴールデンイーグル':['randwick',2000],
+  'コーフィールドカップ':['caulfield',2400],'メルボルンカップ':['flemington',3200],
   'コックスプレート':['mooneevalley',2040],'ドバイターフ':['meydan',1800],'香港カップ':['shatin',2000],
   '大阪杯':['hanshin',2000],'桜花賞':['hanshin',1600],'皐月賞':['nakayama',2000],'天皇賞(春)':['kyoto',3200],'優駿牝馬(オークス)':['tokyo',2400],
   '秋華賞':['kyoto',2000],'菊花賞':['kyoto',3000],'桜花賞(浦和)':['urawa',1600],'羽田盃':['ooi',1800],'東京プリンセス賞':['ooi',1800],
@@ -1704,7 +1698,9 @@ function frailLabel(v){v=v==null?35:v;return v<30?'丈夫':v<55?'普通':v<75?'�
 function tendonLabel(v){v=v==null?35:v;return v<30?'強い':v<55?'普通':v<75?'やや弱い':'脆い';}
 function tendonOf(h){if(h.tendon==null)h.tendon=randInt(15,50);return h.tendon;}
 function traitLineHtml(h){
-  return ` 気性:<b>${temperLabel(h.temper)}</b> 体質:<b>${frailLabel(h.frail)}</b> 腱:<b>${tendonLabel(tendonOf(h))}</b> 道悪:<b>${mudLabel(ensureMud(h))}</b>`;
+  const mt=h.mutant&&MUTANT_BY_KEY[h.mutant];
+  const talent=(h.races||0)>0&&typeof h.gene==='number'?` ✨<b>素質:${h.gene>=0.8?'高い':h.gene>=0.5?'普通':'控えめ'}</b>`:'';
+  return ` 気性:<b>${temperLabel(h.temper)}</b> 体質:<b>${frailLabel(h.frail)}</b> 腱:<b>${tendonLabel(tendonOf(h))}</b> 道悪:<b>${mudLabel(ensureMud(h))}</b>${mt?` 🧬<b>変異:${mt.name}</b>(${mt.desc})`:''}${talent}`;
 }
 
 /* ================= 使いやすさ(確認画面・通知・セーブ・メニュー) ================= */
@@ -1820,6 +1816,7 @@ function renderHelp(){
   const box=el(`<div class="modal-box"></div>`);
   box.appendChild(el(`<div class="modal-title">遊び方</div>`));
   box.appendChild(el(`<div class="help-body">
+    <div class="help-step"><b>はじめての方へ: 最初の3ステップ</b>①「厩舎」で所有馬を調教師に預ける ②「週を進める」を押して馬の様子を見る ③ 勝って賞金を増やし、「牧場」で繁殖や種牡馬の解放を目指す。</div>
     <div class="help-step"><b>1. 馬を預ける</b>あなたは馬主。馬は調教師の厩舎に預け、調教は調教師が毎週おこないます(預託料が毎週かかります)。</div>
     <div class="help-step"><b>2. レースと騎手を選ぶ</b>厩舎タブの馬カード「今週のレース」で出走レースを選び、騎手を決めます。画面上の「今週の予定」で出走頭数と費用を確認できます。</div>
     <div class="help-step"><b>2.5 調教師におまかせ</b>各馬の「レース選び」が「調教師におまかせ」なら、調教師が自分の方針(ローテーション・状態・適距離・賞金と費用)で出走レースと騎手を決めます。カードで選び直せば今週だけあなたの指示になります。</div>
@@ -1839,7 +1836,7 @@ function renderHelp(){
     <div class="help-step"><b>セーブ</b>週を進めるたびに自動でこの端末に保存し、次に開いたとき「続きから」を選べます(保存できない画面もあります)。</div>
   </div>`));
   const close=el(`<button class="modal-next">わかった</button>`);
-  close.onclick=()=>{helpOpen=false;render();};
+  close.onclick=()=>{helpOpen=false;S.guideSeen=true;render();};
   box.appendChild(close);
   overlay.appendChild(box);
   return overlay;
@@ -2220,6 +2217,9 @@ const CROWN_RACES=[
   {name:'ケンタッキーダービー',tier:'海外・G1',m:5,d:1,cls:'us',age:'3',min:5},
   {name:'プリークネスステークス',tier:'海外・G1',m:5,d:15,cls:'us',age:'3',min:5},
   {name:'ベルモントステークス',tier:'海外・G1',m:6,d:5,cls:'us',age:'3',min:5},
+  {name:'イギリスダービー',tier:'海外・G1',m:6,d:6,cls:'eu',age:'3',min:5},
+  {name:'キングジョージ6世&クイーンエリザベスステークス',tier:'海外・G1',m:7,d:25,cls:'eu',age:'3+',min:5},
+  {name:'凱旋門賞',tier:'海外・G1',m:10,d:4,cls:'eu',age:'3+',min:5},
 ];
 const TRIPLE_CROWNS=[
   {key:'classic',name:'クラシック三冠',races:['皐月賞','日本ダービー','菊花賞'],desc:'中央の3歳最高峰。皐月賞・日本ダービー・菊花賞'},
@@ -2228,9 +2228,10 @@ const TRIPLE_CROWNS=[
   {key:'autumn',name:'秋古馬三冠',races:['天皇賞(秋)','ジャパンカップ','有馬記念'],desc:'秋の古馬中長距離G1を同一年に'},
   {key:'dirt3',name:'3歳ダート三冠',races:['羽田盃','東京ダービー','ジャパンダートクラシック'],desc:'2024年に創設された3歳ダートの頂点'},
   {key:'nkfilly',name:'南関東牝馬三冠',races:['桜花賞(浦和)','東京プリンセス賞','関東オークス'],desc:'南関東の3歳牝馬'},
+  {key:'euro',name:'欧州三冠',races:['イギリスダービー','キングジョージ6世&クイーンエリザベスステークス','凱旋門賞'],desc:'欧州の3大G1(英ダービー・キングジョージ・凱旋門賞)を同一年に'},
   {key:'us',name:'米国三冠',races:['ケンタッキーダービー','プリークネスステークス','ベルモントステークス'],desc:'アメリカの3歳ダート三冠'},
 ];
-const CROWN_FLAG={jra:'🇯🇵🌱 ',jra3:'🇯🇵🌱 ',nk:'',d3:'',us:'🇺🇸 '};
+const CROWN_FLAG={jra:'🇯🇵🌱 ',jra3:'🇯🇵🌱 ',nk:'',d3:'',us:'🇺🇸 ',eu:'🇪🇺 '};
 function crownRaceOfName(name){return CROWN_RACES.slice().sort((a,b)=>b.name.length-a.name.length).find(c=>(name||'').includes(c.name));}
 function weekInWindow(week,m,d){
   const dt=weekToDate(week);
@@ -2241,11 +2242,11 @@ function weekInWindow(week,m,d){
 function crownRacesThisWeek(week){
   return CROWN_RACES.filter(c=>weekInWindow(week,c.m,c.d)).map(c=>{
     const base=CLASSES[4];
-    const p={jra:[18000000,6000000,2500000],jra3:[15000000,5000000,2000000],nk:[3600000,1300000,600000],d3:[8000000,2900000,1300000],us:[40000000,15000000,6000000]}[c.cls];
-    const bl={jra:1.35,jra3:1.2,nk:0.85,d3:1.02,us:1.5}[c.cls];
-    const turf=c.cls==='jra'||c.cls==='jra3';
+    const p={jra:[18000000,6000000,2500000],jra3:[15000000,5000000,2000000],nk:[3600000,1300000,600000],d3:[8000000,2900000,1300000],us:[40000000,15000000,6000000],eu:[40000000,15000000,6000000]}[c.cls];
+    const bl={jra:1.35,jra3:1.2,nk:0.85,d3:1.02,us:1.5,eu:1.5}[c.cls];
+    const turf=c.cls==='jra'||c.cls==='jra3'||c.cls==='eu';
     return {classKey:'三冠',name:`${CROWN_FLAG[c.cls]}${c.name}(${c.tier}${turf?'・芝':''})`,baseline:Math.round(base.baseline*bl),
-      entryFee:{jra:90000,jra3:80000,nk:20000,d3:40000,us:130000}[c.cls],travelFee:{jra:220000,jra3:220000,nk:0,d3:0,us:2200000}[c.cls],
+      entryFee:{jra:90000,jra3:80000,nk:20000,d3:40000,us:130000,eu:130000}[c.cls],travelFee:{jra:220000,jra3:220000,nk:0,d3:0,us:2200000,eu:2200000}[c.cls],
       surface:turf?'turf':'dirt',prize:p,req:{age:c.age,sex:c.sex||null,min:c.min},crownRace:c.name};
   });
 }
@@ -2380,7 +2381,7 @@ function npcEligible(n,r){
   if(typeof FILLY_ONLY!=='undefined'&&FILLY_ONLY.some(x=>(r.name||'').includes(x))&&n.sex!=='牝') return false;
   const ck=r.classKey;
   if(!r.req&&n.age<raceMinAge(r)) return false; // 年齢条件
-  const ovs=['meydan','kaa','gulfstream','delmar','longchamp','ascot','mooneevalley','shatin','churchill','pimlico','saratoga'].includes(r.venue);
+  const ovs=['meydan','kaa','gulfstream','delmar','longchamp','ascot','mooneevalley','caulfield','flemington','randwick','epsom','shatin','churchill','pimlico','saratoga'].includes(r.venue);
   if(ovs) return n.cat==='intl'||(n.cat==='jra'&&npcPower(n)>=128);
   if(/ジャパンカップ/.test(r.name||'')) return n.cat==='jra'||(n.cat==='intl'&&n.turf>=70); // 国際招待
   if(ck==='中央'||ck==='中央芝'||ck==='中央L'||(ck==='三冠'&&r.surface==='turf')) return n.cat==='jra';
@@ -2408,7 +2409,7 @@ function pickNpcField(r,count,exclude){
   }
   const used=npcUsedNames();
   while(out.length<count){ // 足りなければ、このクラスに合う新しい馬が登場
-    const cat=['meydan','kaa','gulfstream','delmar','longchamp','ascot','mooneevalley','shatin','churchill','pimlico','saratoga'].includes(r.venue)?'intl':(['中央','中央芝','中央L'].includes(r.classKey)||(r.classKey==='三冠'&&r.surface==='turf'))?'jra':'local';
+    const cat=['meydan','kaa','gulfstream','delmar','longchamp','ascot','mooneevalley','caulfield','flemington','randwick','epsom','shatin','churchill','pimlico','saratoga'].includes(r.venue)?'intl':(['中央','中央芝','中央L'].includes(r.classKey)||(r.classKey==='三冠'&&r.surface==='turf'))?'jra':'local';
     const age=r.sub===0?2:r.req&&r.req.age==='2'?2:r.req&&r.req.age==='3'?3:r.req&&r.req.age==='4+'?randInt(4,6):randInt(3,5);
     const n=makeNpc(cat,age,used);
     if(r.req&&r.req.sex) n.sex=r.req.sex;
@@ -2654,7 +2655,7 @@ function makeOverseasSaleHorse(sale){
 }
 /* 出馬表の記号(マル地・カク地・マル外・カク外)と、海外レースでの国名 */
 const JRA_VENUES=['tokyo','nakayama','kyoto','hanshin','chukyo','sapporo'];
-const OVERSEAS_VENUE_KEYS=['meydan','kaa','gulfstream','delmar','longchamp','ascot','mooneevalley','shatin','churchill','pimlico','saratoga'];
+const OVERSEAS_VENUE_KEYS=['meydan','kaa','gulfstream','delmar','longchamp','ascot','mooneevalley','caulfield','flemington','randwick','epsom','shatin','churchill','pimlico','saratoga'];
 function horseMarkHtml(f,r){
   const v=r&&r.venue;
   if(OVERSEAS_VENUE_KEYS.includes(v)){
@@ -3105,8 +3106,32 @@ const STALLIONS_RAW=[
  ['ミッキーアイル',100,'yushun','ディープインパクト','スターアイル','Rock of Gibraltar','アイルドフランス','t','S'],
  ['カリフォルニアクローム',100,'arrow','Lucky Pulpit','Love the Chase','Not For Love','Chase It Down','d','I'],
  ['ダノンキングリー',100,'shadai','ディープインパクト','マイグッドネス','Storm Cat','Caress','t','M'],
+ ['フォルキャップ',100,'crack','クレイドルサイアー','コスモフリップ','アイルハヴアナザー','マンデームスメ','d','M'],
+ // 地方ランキング(2026年10月11日時点)の仮登録。種付料は仮の値
+ ['ルヴァンスレーヴ',200,'crack','シンボリクリスエス','マエストラーレ','ネオユニヴァース','オータムブリーズ','d','I'],
+ ['ダノンレジェンド',150,'crack','Macho Uno','My Goodness','Storm Cat','Caressing','d','M'],
+ ['マジェスティックウォリアー',100,'crack','A.P. Indy','Dream Supreme','Seeking the Gold','Spinning Round','d','M'],
+ ['モーニン',100,'crack','Henny Hughes','Giggly','Distorted Humor','Chaste','d','M'],
+ // 実績で解放される種牡馬(条件は SIRE_UNLOCKS)。種付料は仮の値
+ ['サンデーサイレンス',3000,'shadai','Halo','Wishing Well','Understanding','Mountain Flower','t','I'],
+ ['ブライアンズタイム',1500,'shadai','Roberto',"Kelley's Day",null,null,'t','I'],
+ ['ディープインパクト',2500,'shadai','サンデーサイレンス','ウインドインハーヘア','Alzao','Burghclere','t','I'],
+ // 実績で解放(隠し種牡馬)。種付料・種馬場は仮の値
+ ['サイレンススズカ',800,'oiwake','サンデーサイレンス','ワキア','Miswaki','Rascal Rascal','t','M'],
+ ['ヴェルトライゼンデ',300,'oiwake','ドリームジャーニー','マンデラ','Acatenango','Mandellicht','t','I'],
+ // 地方の御用達(血統は netkeiba・JBIS の画面どおり)。種付料は仮の値
+ ['サウスヴィグラス',300,'crack','エンドスウィープ','ダーケストスター','Star de Naskra','Minnie Riperton','d','M'],
+ ['ワイルドワンダー',200,'crack','ブライアンズタイム','ワルツダンサー','サンデーサイレンス','ウィシングフォアスター','d','M'],
+ ['アジアエクスプレス',150,'crack','ヘニーヒューズ','ランニングポプキャッツ','Running Stag','Backatem','d','M'],
+ // 出走条件で解放される隠し種牡馬(血統は netkeiba の画面どおり)。種付料・種馬場・距離適性は仮の値
+ ['キーストン',150,'crack','ソロナウェー','リットルミッジ','Migoli','Valerie','t','M'],
+ ['ライスシャワー',200,'crack','リアルシャダイ','ライラックポイント','マルゼンスキー','クリカツラ','t','L'],
+ ['テンポイント',300,'crack','コントライト','ワカクモ','カバーラップ二世',null,'t','I'],
+ ['アドマイヤラクティ',200,'crack','ハーツクライ','アドマイヤテレサ','エリシオ','ヒード','t','I'],
 ];
 const STALLIONS=STALLIONS_RAW.map(([name,fee,st,sire,dam,ds,dd,surf,dist])=>({name,fee:fee*10000,st,sire,dam,ds,dd,surf,dist}));
+// フォルキャップの父系(オグリキャップ→ノーザンキャップ→クレイドルサイアー)と母の血統(JBIS・netkeibaで確認)。既存の登録は上書きしない
+(function(){const a=(n,v)=>{if(!PED_DB[n])PED_DB[n]=v;};a('クレイドルサイアー',['ノーザンキャップ','マタニティパワー']);a('ノーザンキャップ',['オグリキャップ','—']);a('コスモフリップ',['アイルハヴアナザー','マンデームスメ']);})();
 // 血統表をたどれるよう、種牡馬とその祖先をPED_DBに登録(実在馬の既存データは上書きしない)
 (function(){
   const add=(n,a,b)=>{if(n&&!PED_DB[n]&&(a||b))PED_DB[n]=[a||'—',b||'—'];};
@@ -3139,6 +3164,11 @@ let farmMatingMareId=null, farmMatingFilter='all', farmMatingPick=null;
 function ownedMares(){return (S.retired||[]).filter(r=>r.kind==='dam'&&r.owned&&!r.farmRetired);}
 function farmFees(){return ownedMares().length*MARE_WEEKLY_FEE+(S.homebreds||[]).length*FOAL_WEEKLY_FEE;}
 // 自分の種牡馬(引退して種牡馬入りした馬)も、元オーナー優待で種付料半額で使える
+/* 隠れた素質(遺伝子値 0〜1)。見えない値で、親の成績とは独立に決まる。
+   繁殖牝馬は生成時に乱数、種牡馬は名前から決まる固定値。 */
+function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function nameGene(name){let x=0;for(const c of String(name||'')) x=(x*131+c.charCodeAt(0))>>>0;return 0.05+0.9*((x%10000)/10000);}
+function geneOf(h){return h&&typeof h.gene==='number'?h.gene:0.5;}
 function ownStallions(){return (S.retired||[]).filter(r=>r.kind==='sire'&&r.age<=20).map(r=>({name:r.name,fee:Math.max(100000,Math.round(r.fee*0.5/10000)*10000),st:r.stationKey,own:true,rec:r,
   surf:(r.history||[]).filter(x=>x.rank<=3).some(x=>/芝/.test(x.raceName))?'t':'d',dist:r.speed>r.stamina+8?'S':r.stamina>r.speed+8?'L':'M'}));}
 function registerOwnPed(r){
@@ -3207,9 +3237,13 @@ function matingPreview(s,m){
   const ok=pedOK(cr)&&s.name!==m.sireName&&!(s.own&&s.rec.damName===m.name);
   const sq=stallionQ(s)*lineTrendOf(lineKeyOf(s.name)),mq=mareQ(m);
   const exp=0.55*sq+0.45*mq+(nick?0.04:0)+(miracle?0.03:0)-(ib>18.75?0.02:0);
-  return {fp,both,close,ib,nick,miracle,ok,sq,mq,exp,stars:clamp(Math.round((exp-0.3)/0.11),1,5)};
+  const gs=s.own&&s.rec?geneOf(s.rec):nameGene(s.name),gm=geneOf(m);
+  return {fp,both,close,ib,nick,miracle,ok,sq,mq,exp,gs,gm,stars:clamp(Math.round((exp-0.3)/0.11),1,5)};
 }
 // 血統アナリストの配合診断
+/* 素質の目安(★1〜5)。見えない値の大まかな目安で、正確な値ではない */
+function geneStars(g){return clamp(Math.round(g*4)+1,1,5);}
+function geneStarText(g){return '★'.repeat(geneStars(g))+'☆'.repeat(5-geneStars(g));}
 function matingAdvice(s,m,pv){
   const g=[],b=[];
   if(pv.nick) g.push(`父系×母父系は「${pv.nick.label}」。相性が良い`);
@@ -3276,7 +3310,17 @@ function makeFoal(m){
    const mT=m.temper??35,mF=m.frail??35;
    h.temper=clamp(Math.round((pT+mT)/2+(LINE_TEMPER[sl.key]||0)+fam.tempB+randInt(-12,12)),5,95);
    h.frail=clamp(Math.round((pF+mF)/2+(LINE_FRAIL[dl.key]||0)+fam.frailB+randInt(-12,12)),5,95);h.inheritT=true;const pTd=(s.rec&&s.rec.tendon)??35,mTd=m.tendon??35;h.tendon=clamp(Math.round((pTd+mTd)/2+(LINE_TENDON[sl.key]||0)+(fam.tendB||0)+randInt(-12,12)),5,95);}
+  // 隠れた素質: 両親の平均+ばらつき。高い仔は能力が伸びる(成績とは独立に大物が出る)
+  {const gp=s.rec?geneOf(s.rec):nameGene(s.name);
+   const gn=clamp((gp+geneOf(m))/2+0.12*gauss(),0,1);h.gene=gn;
+   // 素質が高い仔ほど伸びる。0.72を超えると伸びが急になり、まれに大物が出る
+   const gb=Math.round((gn-0.5)*16+Math.max(0,gn-0.7)*130);
+   h.speed=clamp(h.speed+gb,10,95);h.stamina=clamp(h.stamina+gb,10,95);h.guts=clamp(h.guts+gb,10,95);}
   h.growth=null;h.growth=pickGrowth(h.sireName);
+  // 変異の遺伝: 父(自家の種牡馬)か母に変異があれば、3割の確率で受け継ぐ。なければまれに新しく発生
+  {const inh=[s.rec&&s.rec.mutant,m.mutant].filter(Boolean);
+   if(inh.length&&Math.random()<0.3) applyMutant(h,MUTANT_BY_KEY[inh[randInt(0,inh.length-1)]]);
+   else rollMutant(h);}
   h.uniqueSkill=Math.random()<0.04+0.25*pv.exp*pv.exp?UNIQUE_SKILLS[randInt(0,UNIQUE_SKILLS.length-1)].key:null;
   h.pastHistory=null;h.history=[];h.ibApplied=false;
   refreshHorseTraits(h);
@@ -3322,11 +3366,14 @@ function sireYearNotice(report,yi){
 }
 function lineageRankingEl(){
   const sires=Object.entries(S.sireStats||{}).map(([n,s])=>({n,...s})).sort((a,b)=>b.gw-a.gw||b.wins-a.wins||b.runs-a.runs).slice(0,8);
+  const localSires=Object.entries(S.localSireWins||{}).sort((a,b)=>b[1]-a[1]).slice(0,8);
   const fams=Object.values(S.families||{}).filter(f=>f.runs>0).sort((a,b)=>b.gw-a.gw||b.top3-a.top3||b.runs-a.runs).slice(0,6);
-  if(!sires.length&&!fams.length) return null;
+  if(!sires.length&&!fams.length&&!localSires.length) return null;
   const row='display:flex;gap:8px;align-items:baseline;font-size:12px;padding:4px 0;border-bottom:1px solid #0001';
   let html=`<div class="section-label"><span>自家種牡馬ランキング</span><span>産駒の成績</span></div>`;
   html+=sires.length?sires.map((s,i)=>`<div style="${row}"><span style="min-width:30px">${i+1}位</span><b style="flex:1">${s.n}</b><small>出走${s.runs}・勝ち${s.wins}・重賞${s.gw}</small></div>`).join(''):'<div class="pedigree-line">まだ産駒の出走がありません。</div>';
+  html+=`<div class="section-label"><span>地方の種牡馬ランキング</span><span>地方での勝ち数</span></div>`;
+  html+=localSires.length?localSires.map(([n,w],i)=>`<div style="${row}"><span style="min-width:30px">${i+1}位</span><b style="flex:1">${n}</b><small>地方の勝ち${w}</small></div>`).join(''):'<div class="pedigree-line">まだ地方の勝ち馬がいません。</div>';
   html+=`<div class="section-label"><span>牝系ランキング</span><span>一族の成績</span></div>`;
   html+=fams.length?fams.map((f,i)=>`<div style="${row}"><span style="min-width:30px">${i+1}位</span><b style="flex:1">${f.root}牝系</b><small>出走${f.runs}・3着内${f.top3}・重賞${f.gw}</small></div>`+((f.hits&&f.hits.length)?`<div style="font-size:11px;color:#666;padding:2px 0 6px 38px">重賞勝ち: ${f.hits.slice().reverse().slice(0,5).map(x=>`${x.h}(${x.r})`).join('、')}</div>`:'')).join(''):'<div class="pedigree-line">まだ一族の出走がありません。</div>';
   const box=el(`<div class="lineage-box"></div>`);box.innerHTML=html;return box;
@@ -3338,10 +3385,12 @@ function farmWeekly(report){
     if(m.pregnant&&S.week>=m.pregnant.due){
       if(Math.random()<0.93){
         const f=makeFoal(m);
+        sfxQueue.push('birth');
         S.homebreds.push(f);
         if(!m.produce) m.produce=[];
         m.produce.push({id:f.id,sire:m.pregnant.sire,y:calendarParts(S.week).yearIndex,sex:f.sex});
         report.push({type:'notice',text:`🍼 ${m.name}が${f.sex==='牡'?'牡':'牝'}馬を出産!父は${m.pregnant.sire}。「牧場」タブで確認できる。`});
+        if(geneOf(f)>=0.8) report.push({type:'notice',text:`✨ ${f.name}に、まだ見えない素質の気配がある。育つまで分からない。`});
         addNews(`${m.name}に${m.pregnant.sire}の${f.sex}駒が誕生。`,'');
       } else {
         report.push({type:'notice',text:`😢 ${m.name}は流産してしまった(父${m.pregnant.sire})。今年もまた種付けができる。`});
@@ -3466,6 +3515,54 @@ function renderFarm(){
   return wrap;
 }
 /* ---- 配合の画面 ---- */
+/* 実績で解放される種牡馬。解放前は配合の一覧で「？？？(条件)」と表示する */
+const SIRE_UNLOCKS={
+  'サンデーサイレンス':{cond:'地方馬で「ダービー」を勝つ',need:1,step:(h,r,f)=>f.rank===1&&horseRegion(h)!=='jra'&&/ダービー/.test(r.name)&&!isOverseasRace(r)},
+  'ブライアンズタイム':{cond:'自家製の馬でG1を勝つ',need:1,step:(h,r,f)=>f.rank===1&&!!h.homebred&&isG1Grade(r.grade)},
+  'ディープインパクト':{cond:'東京優駿(日本ダービー)を勝つ',need:1,step:(h,r,f)=>f.rank===1&&/日本ダービー|東京優駿/.test(r.name)},
+  'サイレンススズカ':{cond:'逃げ脚質の馬で10勝する',need:10,step:(h,r,f)=>f.rank===1&&h.runStyle==='逃げ'},
+  'ヴェルトライゼンデ':{cond:'怪我をした経験のある馬がレースに復帰する',need:1,step:(h,r,f)=>!!h.hadInjury},
+  'キーストン':{cond:'日本ダービーに出走する',need:1,step:(h,r,f)=>/日本ダービー|東京優駿/.test(r.name)},
+  'ライスシャワー':{cond:'菊花賞と天皇賞(春)に出走する',need:2,races:['菊花賞','天皇賞(春)']},
+  'テンポイント':{cond:'有馬記念に出走する',need:1,step:(h,r,f)=>(r.name||'').includes('有馬記念')},
+  'アドマイヤラクティ':{cond:'コーフィールドカップとメルボルンカップに出走する',need:2,races:['コーフィールドカップ','メルボルンカップ']}
+};
+function isOverseasRace(r){
+  return OVERSEAS_VENUE_KEYS.includes(r.venue)||[...OVERSEAS_RACES,...OVERSEAS_TURF_RACES].some(g=>g.name===r.name);
+}
+function sireProgress(h,r,f){
+  checkSireUnlocks(h,r,f);
+}
+/* 解放条件の進み具合(数で測れる条件だけ数字を出す) */
+function sireProgressText(name){
+  const u=SIRE_UNLOCKS[name];if(!u) return '';
+  return `${Math.min((S.sireCounts||{})[name]||0,u.need)}/${u.need}`;
+}
+function isSireLocked(st){return !!SIRE_UNLOCKS[st.name]&&!(S.unlockedSires||[]).includes(st.name);}
+function checkSireUnlocks(h,r,f){
+  f=f||{rank:1};
+  if(!S.unlockedSires) S.unlockedSires=[];
+  if(!S.sireCounts) S.sireCounts={};
+  Object.entries(SIRE_UNLOCKS).forEach(([name,u])=>{
+    if(S.unlockedSires.includes(name)) return;
+    if(u.races){
+      // 出走したレース名を重複なしで数える(同じレースを何度走っても1回)
+      S.sireRaceSeen=S.sireRaceSeen||{};
+      const seen=S.sireRaceSeen[name]=S.sireRaceSeen[name]||[];
+      const hit=u.races.find(x=>(r.name||'').includes(x));
+      if(!hit||seen.includes(hit)) return;
+      seen.push(hit);
+      S.sireCounts[name]=seen.length;
+    } else {
+      if(!u.step(h,r,f)) return;
+      S.sireCounts[name]=(S.sireCounts[name]||0)+1;
+    }
+    if(S.sireCounts[name]<u.need) return;
+    S.unlockedSires.push(name);
+    addNews(`「${name}」が種牡馬として解放された(条件:${u.cond})。配合の一覧で選べる。`,'');
+    sfxQueue.push('g1');
+  });
+}
 function renderMatingModal(){
   const m=(S.retired||[]).find(r=>r.id===farmMatingMareId);
   const overlay=el(`<div class="modal-overlay"></div>`);
@@ -3481,6 +3578,7 @@ function renderMatingModal(){
     box.appendChild(el(`<div class="pedigree-line" style="padding-left:0">${lineSummary(tmp)} ${pv.nick?`<span class="nick-badge">◎${pv.nick.label}</span>`:''}</div>`));
     box.appendChild(el(`<div class="pedigree-line" style="padding-left:0">クロス(5代内):${pv.both.length?pv.both.map(c=>crossLabel(c)).join('、'):'なし(アウトブリード)'}</div>`));
     box.appendChild(el(`<div class="pedigree-line" style="padding-left:0">期待度 <span class="adv-stars">${'★'.repeat(pv.stars)}${'☆'.repeat(5-pv.stars)}</span>(父の評価 ${Math.round(pv.sq*100)} / 母の評価 ${Math.round(pv.mq*100)})</div>`));
+    box.appendChild(el(`<div class="pedigree-line" style="padding-left:0">隠れた素質の目安 父 <span class="adv-stars">${geneStarText(pv.gs)}</span> / 母 <span class="adv-stars">${geneStarText(pv.gm)}</span><br><small>※見えない値の目安。評価が低くても素質が高いことがあります。</small></div>`));
     if(supporterLevel('ketto')){
       const a=matingAdvice(s,m,pv);
       box.appendChild(el(`<div class="advice-box"><div class="adv"><div class="adv-h">📜 系 真理子<small>血統アナリストの配合診断</small></div>${a.g.map(t=>`<div class="adv-g">◎ ${t}</div>`).join('')}${a.b.map(t=>`<div class="adv-b">△ ${t}</div>`).join('')}${!a.g.length&&!a.b.length?'<div class="adv-n">可もなく不可もない、無難な配合です</div>':''}</div></div>`));
@@ -3504,11 +3602,15 @@ function renderMatingModal(){
     if(f==='own') return s.own; if(f==='d') return s.surf==='d'; if(f==='t') return s.surf==='t'; return true;});
   if(!list.length) box.appendChild(el(`<div class="modal-sub">該当する種牡馬がいません。${farmMatingFilter==='own'?'自分の馬を種牡馬入りさせると、ここに並びます。':''}</div>`));
   list.forEach(s=>{
+    if(isSireLocked(s)){
+      box.appendChild(el(`<div class="trainer-card career-card blocked"><div class="trainer-head"><span class="trainer-name">？？？<small>未解放の種牡馬</small></span></div><div class="trainer-meta">条件: ${SIRE_UNLOCKS[s.name].cond}</div><div class="trainer-meta">進み具合: ${sireProgressText(s.name)}</div></div>`));
+      return;
+    }
     const pv=matingPreview(s,m);
     const l=sireLineOf(s.name);
     const card=el(`<div class="trainer-card career-card ${pv.ok?'':'blocked'}">
       <div class="trainer-head"><span class="trainer-name">${s.own?'⭐ ':''}${s.name}<small>${s.own?'自分の種牡馬':(STUD_STATION_BY_KEY[s.st]||{}).name||''}</small></span><span class="trainer-skill">${manYenLabel(s.fee)}</span></div>
-      <div class="trainer-meta">${l?`${l.big}/${l.small}`:''} ・ ${{t:'芝',d:'ダート',b:'芝ダ兼用'}[s.surf]||''}・${{S:'短距離',M:'マイル',I:'中距離',L:'長距離'}[s.dist]||''} ・ 期待度 <span class="adv-stars">${'★'.repeat(pv.stars)}${'☆'.repeat(5-pv.stars)}</span></div>
+      <div class="trainer-meta">${l?`${l.big}/${l.small}`:''} ・ ${{t:'芝',d:'ダート',b:'芝ダ兼用'}[s.surf]||''}・${{S:'短距離',M:'マイル',I:'中距離',L:'長距離'}[s.dist]||''} ・ 期待度 <span class="adv-stars">${'★'.repeat(pv.stars)}${'☆'.repeat(5-pv.stars)}</span> ・ 素質の目安 <span class="adv-stars">${geneStarText(pv.gs)}</span></div>
       <div class="trainer-meta">${pv.nick?`<span class="nick-badge">◎${pv.nick.label}</span> `:''}${pv.miracle?'✨奇跡の血量 ':''}${pv.close.length?`クロス:${pv.close.map(c=>c.name+' '+c.gens.join('×')).join('、')}`:'近いクロスなし'}${pv.ib>18.75?' <span style="color:#ffb3a8">⚠濃い</span>':''}${pv.ok?'':' <span style="color:#ffb3a8">近親のため不可</span>'}</div>
     </div>`);
     card.onclick=()=>{farmMatingPick=s.name;render();};
@@ -3656,6 +3758,7 @@ function renderMareLotCard(h){
   top.onclick=()=>{horseDetail=h;render();};
   card.appendChild(top);
   card.appendChild(el(`<div class="small-farm-tag">${h.saleNote} ・ 現役${h.races}戦${h.wins}勝 ・ 🏡 ${h.farm.name}</div>`));
+  card.appendChild(el(`<div class="small-farm-tag">隠れた素質の目安 <span class="adv-stars">${geneStarText(geneOf(h))}</span></div>`));
   if(h.inFoal) card.appendChild(el(`<div class="small-farm-tag">🤰 受胎済み:${h.inFoal.sire}の子(種付料${manYenLabel(h.inFoal.fee)})。来春に出産予定</div>`));
   card.appendChild(el(`<div class="pedigree-line" style="padding-left:0">父:<b>${h.sireName}</b> 母:<b>${h.damName}</b> 母父:<b>${h.damSireName}</b>${lineSummary(h)}${crossSummary(h)}</div>`));
   card.appendChild(el(`<div class="pedigree-line" style="padding-left:0">${traitLineHtml(h).trim()}</div>`));
@@ -3892,7 +3995,7 @@ function rollInjury(h,ctx){
   if(lv&&(k==='tendon'||k==='fracture')&&Math.random()<[0,0.3,0.5,0.7][lv]){k=k==='tendon'?'sprain':'bruise';saved=true;}
   const I=INJURIES[k];
   const weeks=randInt(I.w[0],I.w[1]);
-  h.injury=weeks;h.injuryName=I.name;
+  h.injury=weeks;h.injuryName=I.name;h.hadInjury=true;
   if(I.perm){['speed','stamina','guts'].forEach(s=>{if(h[s]<150)h[s]=clamp(h[s]-randInt(Math.max(1,I.perm-1),I.perm+1),10,99);});}
   if(k==='tendon') h.tendonHist=(h.tendonHist||0)+1;
   return {k,name:I.name,weeks,desc:I.desc,saved,serious:!!I.perm};
@@ -4618,8 +4721,30 @@ function ensureQuirk(h){
   return h.quirk;
 }
 // レースの力に上乗せする癖・騎手相性の補正
+/* ---- 突然変異(血統から見た予想を超えて化ける馬) ----
+   発生は自家生産の産駒の一部だけ。名馬の型をモデルにしている。 */
+const MUTANT_RATE=0.003;
+const MUTANTS=[
+  {key:'ogu',name:'オグリキャップ型',desc:'若いうちに急成長し、根性が強い',apply:h=>{h.growth='early';h.guts=clamp(h.guts+6,10,99);}},
+  {key:'teio',name:'トウカイテイオー型',desc:'故障に強く、持久力がある',apply:h=>{h.frail=clamp((h.frail==null?35:h.frail)-8,0,100);h.stamina=clamp(h.stamina+2,10,99);}},
+  {key:'kita',name:'キタサンブラック型',desc:'スタミナと根性に優れる',apply:h=>{h.stamina=clamp(h.stamina+6,10,99);h.guts=clamp(h.guts+4,10,99);}},
+  {key:'equi',name:'イクイノックス型',desc:'スピードが血統の予想を超えて突出している',apply:h=>{h.speed=clamp(h.speed+8,10,99);}},
+  {key:'mei',name:'メイセイオペラ型',desc:'晩成で、年をとるほどスタミナが伸びる',apply:h=>{h.growth='late';h.stamina=clamp(h.stamina+4,10,99);}},
+  {key:'teiem',name:'テイエムオペラオー型',desc:'レースで安定して力を出せる',apply:h=>{h.consistent=true;}},
+  {key:'frag',name:'脚の変異型',bad:true,desc:'脚が弱く故障しやすいが、スピードは高い',apply:h=>{h.frail=clamp((h.frail==null?35:h.frail)+15,0,100);h.tendon=clamp(tendonOf(h)+15,0,100);h.speed=clamp(h.speed+4,10,99);}},
+  {key:'slow',name:'晩成の遅れ型',bad:true,desc:'成長が遅く、若いうちは能力が伸びない',apply:h=>{h.growth='late';h.speed=clamp(h.speed-4,10,99);}},
+];
+const MUTANT_BY_KEY=Object.fromEntries(MUTANTS.map(m=>[m.key,m]));
+function applyMutant(h,m){h.mutant=m.key;m.apply(h);return m;}
+function rollMutant(h){
+  if(Math.random()>=MUTANT_RATE) return null;
+  const bad=Math.random()<0.3;
+  const pool=MUTANTS.filter(m=>!!m.bad===bad);
+  return applyMutant(h,pool[randInt(0,pool.length-1)]);
+}
 function extraPower(h,r,jockey){
   let p=0;
+  if(h.consistent) p+=1.5; // テイエムオペラオー型: 力のばらつきを抑える
   const q=ensureQuirk(h);
   if(q==='gate'&&Math.random()<0.15) p-=6;
   if(q==='trailer'&&(r.travelFee||0)>0) p-=3;
@@ -5042,7 +5167,7 @@ function simulateRace(r,field,pace){
   const dist=r.dist,turf=r.surface==='turf',gi=r.goingIdx||0,n=field.length,dt=0.4;
   // 実在のコースレコードがあるコースは、それを基準に時計を合わせる(力のある馬=強さ175でレコード相当)
   const rcd=(typeof realRecord==='function'&&r.venue)?realRecord(r):null;
-  const ovs=['meydan','kaa','gulfstream','delmar','longchamp','ascot','mooneevalley','shatin','churchill','pimlico','saratoga'].includes(r.venue)?1.02:1; // 海外は相手が強い設定のぶん基準を補正
+  const ovs=['meydan','kaa','gulfstream','delmar','longchamp','ascot','mooneevalley','caulfield','flemington','randwick','epsom','shatin','churchill','pimlico','saratoga'].includes(r.venue)?1.02:1; // 海外は相手が強い設定のぶん基準を補正
   const refV=rcd?dist/(rcd.time*REC_SLOW*ovs*powerSpeedMult(175)/powerSpeedMult(70)):refSpeed(dist,turf);
   const goingMult=turf?1-0.008*gi:1+0.004*gi;
   const heat=pace.heat;
@@ -5125,6 +5250,10 @@ function simulateRace(r,field,pace){
   const byFin=[...field].sort((a,b)=>a.timeSec-b.timeSec);
   byFin.forEach((f,i)=>{f.rank=i+1;f.margin=i===0?'':marginText(f.timeSec-byFin[i-1].timeSec);});
   const winner=byFin[0];
+  // 地方の勝ち馬の父を数える(地方種牡馬ランキング用)
+  {const localRace=!JRA_VENUES.includes(r.venue)&&!OVERSEAS_VENUE_KEYS.includes(r.venue);
+   const sire=winner&&(winner.isPlayer?winner.horse.sireName:(winner.npc&&winner.npc.sire));
+   if(localRace&&sire){S.localSireWins=S.localSireWins||{};S.localSireWins[sire]=(S.localSireWins[sire]||0)+1;}}
   // 勝ち馬のラップ(200mごと。端数は最初の区間)
   const laps=[];
   const rest=dist%200;
@@ -5209,7 +5338,7 @@ function makeHorse(age,starter){
   const nick=findNick(sireLine.key,damLine.key);
 
   const h={
-    id:uid(),name,sex,age,
+    id:uid(),name,sex,age,gene:clamp(0.5+0.2*gauss(),0.02,0.98),
     speed:base(),stamina:base(),guts:base(),
     condition:randInt(70,95),
     wins:0,top3:0,races:0,
@@ -5478,6 +5607,28 @@ function startNewGame(){
   admissionMode='start';
 }
 
+// テスト用: 所有の繁殖牝馬から実際の出産処理(makeFoal)で産駒を作り、変異を強制的に付ける
+function addTestMutantFoal(bad){
+  let mare=ownedMares()[0];
+  if(!mare){
+    const h=makeHorse(4,false);
+    mare=makeOwnMare(h);
+  }
+  const sire=STALLION_BY_NAME['フォルキャップ']?'フォルキャップ':pickRealSire();
+  const stFee=(STALLION_BY_NAME[sire]||{}).fee||1000000;
+  const f=makeFoal({...mare,pregnant:{sire,fee:stFee,due:S.week}});
+  f.name=`テスト変異${(S.homebreds||[]).length+1}`;
+  const pool=MUTANTS.filter(m=>!!m.bad===bad);
+  applyMutant(f,pool[randInt(0,pool.length-1)]);
+  refreshHorseTraits(f);
+  f.price=homebredValue(f);
+  if(!S.homebreds) S.homebreds=[];
+  S.homebreds.push(f);
+  mare.produce=mare.produce||[];
+  mare.produce.push({id:f.id,sire,y:calendarParts(S.week).yearIndex,sex:f.sex});
+  toast(`${f.name}(${MUTANT_BY_KEY[f.mutant].name})を育成牧場に追加`);
+  return f;
+}
 const CHEAT_CODES={
   'OWNER100':  {label:'資金 +100万円',        apply:()=>{S.money+=1000000;}},
   'OWNERRICH': {label:'資金を1000万円に設定',  apply:()=>{S.money=10000000;}},
@@ -5490,6 +5641,8 @@ const CHEAT_CODES={
     if(S.horses.length>=STABLE_CAP) STABLE_CAP+=1;
     S.horses.push(makeEmperorHorse());
   }},
+  'MUTANT':    {label:'突然変異の産駒を1頭作る(良い変異・ランダム。自家生産の育成牧場に追加)', apply:()=>{addTestMutantFoal(false);}},
+  'MUTANTBAD': {label:'悪い変異の産駒を1頭作る(脚の変異・晩成の遅れのどちらか。自家生産の育成牧場に追加)', apply:()=>{addTestMutantFoal(true);}},
   'OWNERGOD':  {label:'最強馬「ユメノサキヘ」(牡・父トキノミノル・母シラオキ)を厩舎に追加(全ステータス1000、芝・ダート適性MAX)', apply:()=>{
     if(S.horses.length>=STABLE_CAP) STABLE_CAP+=1;
     S.horses.push(makeGodHorse());
@@ -5498,8 +5651,78 @@ const CHEAT_CODES={
 
 function el(html){const t=document.createElement('template');t.innerHTML=html.trim();return t.content.firstElementChild;}
 
+/* ---- 効果音・演出(ブラウザの音声機能で鳴らす。外部ファイルは使わない) ----
+   イベントは sfxQueue に積み、次の描画(render)のときにまとめて鳴らす。 */
+let sfxCtx=null, sfxQueue=[];
+const SFX_MUTE_KEY='keiba_sfx_muted';
+function sfxMuted(){try{return localStorage.getItem(SFX_MUTE_KEY)==='1';}catch(e){return false;}}
+function sfxSetMuted(v){try{localStorage.setItem(SFX_MUTE_KEY,v?'1':'0');}catch(e){}}
+function sfxCtxGet(){
+  try{
+    if(!sfxCtx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;sfxCtx=new AC();}
+    if(sfxCtx.state==='suspended') sfxCtx.resume();
+    return sfxCtx;
+  }catch(e){return null;}
+}
+function sfxTone(freq,start,dur,vol){
+  const c=sfxCtxGet();if(!c)return;
+  try{
+    const o=c.createOscillator(),g=c.createGain();
+    o.type='triangle';o.frequency.value=freq;
+    const t0=c.currentTime+start;
+    g.gain.setValueAtTime(0.0001,t0);
+    g.gain.exponentialRampToValueAtTime(vol||0.18,t0+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    o.connect(g);g.connect(c.destination);
+    o.start(t0);o.stop(t0+dur+0.05);
+  }catch(e){}
+}
+const SFX_PATTERNS={
+  win:  [[523,0,.18],[659,.14,.18],[784,.28,.3]],
+  grade:[[523,0,.16],[659,.12,.16],[784,.24,.16],[1047,.36,.5],[784,.36,.5]],
+  g1:   [[523,0,.14],[659,.11,.14],[784,.22,.14],[1047,.33,.2],[784,.45,.12],[1047,.6,.12],[1319,.72,.7]],
+  birth:[[880,0,.25],[1175,.18,.4]]
+};
+function sfxPlay(name){
+  if(sfxMuted())return;
+  const p=SFX_PATTERNS[name];if(!p)return;
+  p.forEach(([f,st,d])=>sfxTone(f,st,d,0.18));
+}
+function sfxConfetti(){
+  if(sfxMuted())return;
+  try{
+    if(!document.getElementById('confetti-style')){
+      const st=document.createElement('style');st.id='confetti-style';
+      st.textContent='@keyframes cfFall{0%{transform:translateY(-10vh) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:.9}}'+
+        '#confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:9999}'+
+        '#confetti i{position:absolute;top:-10px;width:8px;height:12px;border-radius:2px;animation:cfFall linear forwards}';
+      document.head.appendChild(st);
+    }
+    const box=document.createElement('div');box.id='confetti';
+    const cols=['#e53935','#fdd835','#43a047','#1e88e5','#8e24aa','#fb8c00'];
+    for(let i=0;i<70;i++){
+      const p=document.createElement('i');
+      p.style.left=(Math.random()*100)+'%';
+      p.style.background=cols[i%cols.length];
+      p.style.animationDuration=(1.8+Math.random()*1.6)+'s';
+      p.style.animationDelay=(Math.random()*0.5)+'s';
+      box.appendChild(p);
+    }
+    document.body.appendChild(box);
+    setTimeout(()=>box.remove(),4000);
+  }catch(e){}
+}
+function sfxFlush(){
+  if(!sfxQueue.length)return;
+  const q=sfxQueue;sfxQueue=[];
+  const top=q.includes('g1')?'g1':q.includes('grade')?'grade':q.includes('win')?'win':q[0];
+  sfxPlay(top);
+  if(top==='g1'||top==='grade') sfxConfetti();
+}
 function render(){
   const app=document.getElementById('app');
+  sfxFlush();
+  if(S&&!S.guideSeen&&!helpOpen&&!modalQueue.length&&!ownerSetupOpen) helpOpen=true;
   const scrollY=window.scrollY;
   const oldBox=app.querySelector('.modal-box');
   const oldBoxY=oldBox?oldBox.scrollTop:0,oldKey=currentModalKey;
@@ -5562,7 +5785,7 @@ function render(){
   } else if(cheatPanelOpen){
     key='cheat';app.appendChild(closable(renderCheatPanel(),()=>{cheatPanelOpen=false;}));
   } else if(helpOpen){
-    key='help';app.appendChild(closable(renderHelp(),()=>{helpOpen=false;}));
+    key='help';app.appendChild(closable(renderHelp(),()=>{helpOpen=false;S.guideSeen=true;}));
   } else if(menuOpen){
     key='menu';app.appendChild(closable(renderMenu(),()=>{menuOpen=false;}));
   }
@@ -5595,6 +5818,9 @@ function renderHeader(){
   const heart=el(`<button class="cheat-gear" title="騎手との関係">♥</button>`);
   heart.onclick=()=>{if(modalQueue.length===0){romanceOpen=true;render();}};
   h.querySelector('.hdr-money').appendChild(heart);
+  const snd=el(`<button class="cheat-gear" title="効果音のオン/オフ">${sfxMuted()?'🔈':'🔊'}</button>`);
+  snd.onclick=()=>{sfxSetMuted(!sfxMuted());render();};
+  h.querySelector('.hdr-money').appendChild(snd);
   return h;
 }
 
@@ -5996,7 +6222,8 @@ function advanceWeek(opts){
       h.freshBonus=0;
       if(f.rank===1&&f.jockeyKey&&S.jockeyData&&S.jockeyData[f.jockeyKey]) S.jockeyData[f.jockeyKey].yearWins=(S.jockeyData[f.jockeyKey].yearWins||0)+1;
       if(horseRegion(h)==='jra') h.jraRaces=(h.jraRaces||0)+1;
-      if(f.rank===1){h.wins+=1;if(horseRegion(h)==='jra')h.jraWins=(h.jraWins||0)+1;adjustRep(0,isG1Grade(r.grade)?5:r.grade?2:0.5,isG1Grade(r.grade)?`${h.name}:${r.name}優勝`:r.grade?`${h.name}:重賞${r.name}優勝`:'');}
+      sireProgress(h,r,f);
+      if(f.rank===1){sfxQueue.push(isG1Grade(r.grade)?'g1':r.grade?'grade':'win');h.wins+=1;if(horseRegion(h)==='jra')h.jraWins=(h.jraWins||0)+1;adjustRep(0,isG1Grade(r.grade)?5:r.grade?2:0.5,isG1Grade(r.grade)?`${h.name}:${r.name}優勝`:r.grade?`${h.name}:重賞${r.name}優勝`:'');}
       if(f.jockeyKey){
         h.combo=h.combo||{};h.combo[f.jockeyKey]=(h.combo[f.jockeyKey]||0)+1;
         const gain=3+(f.rank===1?5:f.rank<=3?2:0);
@@ -6947,7 +7174,9 @@ function renderAdmissionModal(){
   // 逃げ道: 選べる調教師が1人もいないときは、馬を入厩待ちに戻して画面を閉じられるようにする
   if(!isTransfer&&!box.querySelector('.buy-btn:not([disabled])')){
     box.appendChild(el(`<div class="warn-line">今は預けられる調教師がいません。入厩待ちに戻して、あとで決めることもできます。</div>`));
-    const later=el(`<button class="cheat-close">入厩待ちに戻す</button>`);
+  }
+  if(!isTransfer){
+    const later=el(`<button class="cheat-close">あとで決める(入厩待ちに戻す)</button>`);
     later.onclick=()=>{if(!S.pendingAdmissions.includes(h.id))S.pendingAdmissions.push(h.id);admissionHorseId=null;toast(`${h.name}は入厩待ちに戻しました`);render();};
     box.appendChild(later);
   }
@@ -7100,12 +7329,6 @@ function renderGameOver(){
   }
   render();
 })();
-</script>
-<script>
-/* オフラインでも遊べるように、サービスワーカーを登録する */
-if('serviceWorker' in navigator && /^https?:/.test(location.protocol)){
-  window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});
-}
 </script>
 </body>
 </html>
