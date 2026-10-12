@@ -258,7 +258,8 @@ main{flex:1;padding:14px 14px 100px;}
 .ped-wrap{margin:8px 0 12px;}
 .ped-title{font-size:12px;color:var(--gold-soft);margin-bottom:4px;font-weight:700;}
 .ped-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px;line-height:1.25;}
-.ped-table td{border:1px solid rgba(255,255,255,.12);padding:2px 3px;vertical-align:middle;word-break:break-all;}
+.ped-table td{border:1px solid rgba(255,255,255,.12);padding:1px 3px;vertical-align:middle;word-break:break-all;}
+.ped-table td.pg5{font-size:9px;line-height:1.1;}
 .ped-table td.ped-f{background:rgba(90,140,255,.10);}
 .ped-table td.ped-m{background:rgba(255,110,150,.10);}
 .ped-table td.pg1{font-size:12px;font-weight:700;}
@@ -1492,17 +1493,17 @@ function renderPedigreeHtml(h){
   ensurePedFict(h);
   // 古い保存データには6代目の架空馬がないので、一度だけ補う
   if(!h.damReal&&h.pedFict&&h.pedFict.mmmmmm===undefined){h.pedFict.mmmmmf=pickFrom(PED_POOL_G5);h.pedFict.mmmmmm=randomDamName();}
-  const ped=buildPedigree(h,6); // 表示は6代まで(配合の判定・能力の計算は従来どおり5代)
+  const ped=buildPedigree(h,5); // 表示は5代まで(6代まで出すと表が縦に長すぎるため)
   const crosses=pedigreeCrosses(buildPedigree(h));
   const color={};
   crosses.forEach((c,i)=>{color[c.name]=CROSS_COLORS[i%CROSS_COLORS.length];});
   let rows='<tr>',prev=0;
   ped.forEach(e=>{
-    if(prev===6) rows+='</tr><tr>';
+    if(prev===5) rows+='</tr><tr>';
     const c=color[e.name];
     const style=c?`style="color:${c};font-weight:700;box-shadow:inset 3px 0 0 ${c};"`:'';
     const ln=(e.pos==='F'||e.pos==='MF')?sireLineOf(e.name):null;
-    rows+=`<td rowspan="${Math.pow(2,6-e.gen)}" class="ped-${e.pos[0]==='F'?'f':'m'} pg${e.gen}" ${style}>${e.name}${ln?`<div class="ped-line">${ln.small}</div>`:''}</td>`;
+    rows+=`<td rowspan="${Math.pow(2,5-e.gen)}" class="ped-${e.pos[0]==='F'?'f':'m'} pg${e.gen}" ${style}>${e.name}${ln?`<div class="ped-line">${ln.small}</div>`:''}</td>`;
     prev=e.gen;
   });
   rows+='</tr>';
