@@ -3129,6 +3129,8 @@ const STALLIONS_RAW=[
  ['ライスシャワー',200,'crack','リアルシャダイ','ライラックポイント','マルゼンスキー','クリカツラ','t','L'],
  ['テンポイント',300,'crack','コントライト','ワカクモ','カバーラップ二世',null,'t','I'],
  ['アドマイヤラクティ',200,'crack','ハーツクライ','アドマイヤテレサ','エリシオ','ヒード','t','I'],
+ ['ミスターシービー',300,'crack','トウショウボーイ','シービークイン','トピオ',null,'t','I'],
+ ['ナリタブライアン',1000,'crack','ブライアンズタイム','パシフィカス','Northern Dancer','Pacific Princess','t','I'],
 ];
 const STALLIONS=STALLIONS_RAW.map(([name,fee,st,sire,dam,ds,dd,surf,dist])=>({name,fee:fee*10000,st,sire,dam,ds,dd,surf,dist}));
 // フォルキャップの父系(オグリキャップ→ノーザンキャップ→クレイドルサイアー)と母の血統(JBIS・netkeibaで確認)。既存の登録は上書きしない
@@ -3379,9 +3381,33 @@ function lineageRankingEl(){
   html+=fams.length?fams.map((f,i)=>`<div style="${row}"><span style="min-width:30px">${i+1}位</span><b style="flex:1">${f.root}牝系</b><small>出走${f.runs}・3着内${f.top3}・重賞${f.gw}</small></div>`+((f.hits&&f.hits.length)?`<div style="font-size:11px;color:#666;padding:2px 0 6px 38px">重賞勝ち: ${f.hits.slice().reverse().slice(0,5).map(x=>`${x.h}(${x.r})`).join('、')}</div>`:'')).join(''):'<div class="pedigree-line">まだ一族の出走がありません。</div>';
   const box=el(`<div class="lineage-box"></div>`);box.innerHTML=html;return box;
 }
+/* 種付けシーズンの最後の週に、空胎の繁殖牝馬へ相性の良い種牡馬を自動で付ける(設定がオンのとき) */
+function autoMateEndOfSeason(report){
+  const yi=calendarParts(S.week).yearIndex;
+  const cands=[...ownStallions(),...STALLIONS.filter(st=>!isSireLocked(st))];
+  ownedMares().forEach(m=>{
+    if(m.pregnant||m.matedYear===yi||m.age>20) return;
+    let best=null;
+    cands.forEach(st=>{
+      if(S.money<st.fee) return;
+      const pv=matingPreview(st,m);
+      if(!pv.ok) return;
+      const score=pv.stars*1e9-st.fee; // 相性(★)を優先し、同じなら種付料の安い方
+      if(!best||score>best.score) best={st,pv,score};
+    });
+    if(!best){
+      report.push({type:'notice',text:`🌾 ${m.name}は自動配合の条件に合う種牡馬がいないため、種付けしなかった。`});
+      return;
+    }
+    breedMare(m,best.st);
+    report.push({type:'notice',text:`🤖 ${m.name}に${best.st.name}を自動で配合(相性★${best.pv.stars})。`});
+  });
+}
 /* 毎週の牧場の処理(出産・入厩待ちの移動) */
 function farmWeekly(report){
   if(!S.homebreds) S.homebreds=[];
+  // 次の週が種付けシーズン外になる=今週がシーズン最後の週
+  if(S.autoMate&&MATING_MONTHS.includes(calendarParts(S.week).month)&&!MATING_MONTHS.includes(calendarParts(S.week+1).month)) autoMateEndOfSeason(report);
   ownedMares().forEach(m=>{
     if(m.pregnant&&S.week>=m.pregnant.due){
       if(Math.random()<0.93){
@@ -3460,6 +3486,10 @@ function renderFarm(){
   const cal=calendarParts(S.week),inSeason=MATING_MONTHS.includes(cal.month);
   wrap.appendChild(el(`<div class="section-label"><span>牧場(自家生産)</span><span>繁殖牝馬 ${mares.length}頭 / 生産馬 ${foals.length}頭 ・ 週 ${yen(farmFees())}</span></div>`));
   wrap.appendChild(el(`<div class="farm-season ${inSeason?'on':''}">${inSeason?'🌸 種付けシーズン中(2〜6月)。空胎の繁殖牝馬に種付けできます。':`種付けシーズンは2〜6月です(いまは${cal.month}月)。`}</div>`));
+  const am=el(`<button class="ctl-btn ${S.autoMate?'active':''}" style="margin:4px 0 8px;">${S.autoMate?'🤖 期末の自動配合:オン':'🤖 期末の自動配合:オフ'}</button>`);
+  am.onclick=()=>{S.autoMate=!S.autoMate;render();};
+  wrap.appendChild(am);
+  wrap.appendChild(el(`<div class="circuit-note" style="margin-bottom:8px;">オンにすると、種付けシーズンの最後の週に、まだ種付けしていない牝馬へ相性の良い種牡馬を自動で付けます(種付料は払います)。</div>`));
   {const lr=lineageRankingEl();if(lr)wrap.appendChild(lr);}
   if(!mares.length&&!foals.length){
     wrap.appendChild(el(`<div class="empty-msg">まだ繁殖牝馬がいません。<br>牝馬を引退させるとき「自分の繁殖牝馬にする(自家生産)」を選ぶと、ここで配合を考えて産駒を生産できます。<br>生まれた産駒は自分で走らせるか、1歳のミックスセール(10月)・セカンドセール(11月)に上場できます。</div>`));
@@ -3523,6 +3553,8 @@ const SIRE_UNLOCKS={
   'ディープインパクト':{cond:'東京優駿(日本ダービー)を勝つ',need:1,step:(h,r,f)=>f.rank===1&&/日本ダービー|東京優駿/.test(r.name)},
   'サイレンススズカ':{cond:'逃げ脚質の馬で10勝する',need:10,step:(h,r,f)=>f.rank===1&&h.runStyle==='逃げ'},
   'ヴェルトライゼンデ':{cond:'怪我をした経験のある馬がレースに復帰する',need:1,step:(h,r,f)=>!!h.hadInjury},
+  'ミスターシービー':{cond:'無敗で重賞を5連勝する',need:1,step:(h,r,f)=>f.rank===1&&!!r.grade&&h.gradeStreak===5},
+  'ナリタブライアン':{cond:'同じG1を2年連続で勝つ',need:1,step:(h,r,f)=>!!h.repeatNow},
   'キーストン':{cond:'日本ダービーに出走する',need:1,step:(h,r,f)=>/日本ダービー|東京優駿/.test(r.name)},
   'ライスシャワー':{cond:'菊花賞と天皇賞(春)に出走する',need:2,races:['菊花賞','天皇賞(春)']},
   'テンポイント':{cond:'有馬記念に出走する',need:1,step:(h,r,f)=>(r.name||'').includes('有馬記念')},
@@ -3533,6 +3565,35 @@ function isOverseasRace(r){
 }
 function sireProgress(h,r,f){
   checkSireUnlocks(h,r,f);
+}
+/* 偉業用の記録:無敗の重賞連勝・同じG1の連覇・自家生産/二代目のG1制覇 */
+function g1BaseName(name){
+  const all=[...GRADE_RACES,...JRA_RACES,...JRA_TURF_RACES,...OVERSEAS_RACES,...OVERSEAS_TURF_RACES,...CROWN_RACES].map(g=>g.name);
+  return all.filter(n=>(name||'').includes(n)).sort((a,b)=>b.length-a.length)[0]||null;
+}
+function updatePlayerRecords(h,r,f,report){
+  h.repeatNow=false; // このレースで連覇したか(隠し種牡馬の判定用)
+  const yi=calendarParts(S.week).yearIndex;
+  if(r.grade){
+    if(f.rank===1){
+      h.gradeStreak=(h.gradeStreak||0)+1;
+      if(h.gradeStreak===3||h.gradeStreak===5) addFeat(report,{kind:'streak',title:`${h.name}、無敗で重賞${h.gradeStreak}連勝!`});
+    } else h.gradeStreak=0;
+  }
+  if(f.rank===1&&isG1Grade(r.grade)){
+    const base=g1BaseName(r.name);
+    if(base){
+      h.g1Wins=h.g1Wins||{};
+      const arr=h.g1Wins[base]=h.g1Wins[base]||[];
+      if(!arr.includes(yi)) arr.push(yi);
+      if(arr.includes(yi-1)){
+        h.repeatNow=true;
+        addFeat(report,{kind:'repeat',title:`${h.name}、${base}連覇!`});
+      }
+    }
+    if(h.homebred) addFeat(report,{kind:'breeder',title:`自家生産の${h.name}、G1「${base||r.name}」制覇!生産者の勲章`});
+    if(h.sireName&&ownStallions().some(x=>x.name===h.sireName)) addFeat(report,{kind:'second',title:`${h.sireName}の産駒${h.name}、G1「${base||r.name}」制覇!二代目の栄光`});
+  }
 }
 /* 解放条件の進み具合(数で測れる条件だけ数字を出す) */
 function sireProgressText(name){
@@ -6223,6 +6284,7 @@ function advanceWeek(opts){
       h.freshBonus=0;
       if(f.rank===1&&f.jockeyKey&&S.jockeyData&&S.jockeyData[f.jockeyKey]) S.jockeyData[f.jockeyKey].yearWins=(S.jockeyData[f.jockeyKey].yearWins||0)+1;
       if(horseRegion(h)==='jra') h.jraRaces=(h.jraRaces||0)+1;
+      updatePlayerRecords(h,r,f,report);
       sireProgress(h,r,f);
       if(f.rank===1){sfxQueue.push(isG1Grade(r.grade)?'g1':r.grade?'grade':'win');h.wins+=1;if(horseRegion(h)==='jra')h.jraWins=(h.jraWins||0)+1;adjustRep(0,isG1Grade(r.grade)?5:r.grade?2:0.5,isG1Grade(r.grade)?`${h.name}:${r.name}優勝`:r.grade?`${h.name}:重賞${r.name}優勝`:'');}
       if(f.jockeyKey){
