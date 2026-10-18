@@ -337,6 +337,13 @@ main{flex:1;padding:14px 14px 100px;}
 .help-step{background:var(--panel-2);border-radius:6px;padding:9px 11px;margin-bottom:8px;}
 .help-step b{display:block;color:var(--gold-soft);margin-bottom:2px;}
 .confirm-overlay{z-index:60;}
+.rp-month{font-weight:bold;margin:10px 0 4px;color:#ffd27a;font-size:13px;}
+.rp-row{display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.08);}
+.rp-row.on{background:rgba(255,210,122,.12);}
+.rp-when{min-width:64px;font-size:12px;opacity:.8;}
+.rp-row b{flex:1;font-size:13px;}
+.rp-horses{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;}
+.rp-list{max-height:45vh;overflow:auto;}
 .confirm-box{max-width:420px;}
 .confirm-text{font-size:13px;line-height:1.8;margin:6px 0 14px;color:var(--text);}
 .confirm-row{display:flex;gap:8px;}
@@ -622,6 +629,7 @@ const LOCAL_TURF_TIER_MULT={"M1":1.3,"M2":1.1,"準重賞":0.9};
 const JRA_TURF_RACES=[
   {name:"有馬記念",tier:"JRA・G1",month:12},
   {name:"日本ダービー",tier:"JRA・G1",month:5},
+  {name:"NHKマイルカップ",tier:"JRA・G1",month:5,age3:true},
   {name:"天皇賞(秋)",tier:"JRA・G1",month:11},
   {name:"ジャパンカップ",tier:"JRA・G1",month:11},
   {name:"安田記念",tier:"JRA・G1",month:6},
@@ -1573,7 +1581,7 @@ const RACE_INFO={
   'イギリスダービー':['epsom',2420],'香港ヴァーズ':['shatin',2400],'香港ゴールドカップ':['shatin',2000],'ドンカスターマイル':['randwick',1600],'ゴールデンイーグル':['randwick',2000],
   'コーフィールドカップ':['caulfield',2400],'メルボルンカップ':['flemington',3200],
   'コックスプレート':['mooneevalley',2040],'ドバイターフ':['meydan',1800],'香港カップ':['shatin',2000],
-  '大阪杯':['hanshin',2000],'桜花賞':['hanshin',1600],'皐月賞':['nakayama',2000],'天皇賞(春)':['kyoto',3200],'優駿牝馬(オークス)':['tokyo',2400],
+  '大阪杯':['hanshin',2000],'桜花賞':['hanshin',1600],'NHKマイルカップ':['tokyo',1600],'皐月賞':['nakayama',2000],'天皇賞(春)':['kyoto',3200],'優駿牝馬(オークス)':['tokyo',2400],
   '秋華賞':['kyoto',2000],'菊花賞':['kyoto',3000],'桜花賞(浦和)':['urawa',1600],'羽田盃':['ooi',1800],'東京プリンセス賞':['ooi',1800],
   '東京ダービー':['ooi',2000],'関東オークス':['kawasaki',2100],'ジャパンダートクラシック':['ooi',2000],
   'ケンタッキーダービー':['churchill',2000],'プリークネスステークス':['pimlico',1900],'ベルモントステークス':['saratoga',2000],
@@ -1793,6 +1801,7 @@ function renderMenu(){
   item('🏅','評判とファン',`徳 ${Math.round(S.rep)}(${repLabel(S.rep)})・ファン ${Math.round(S.fans)}`,()=>{menuOpen=false;repOpen=true;render();});
   item('🗣','サポーター',`馬体の見立て役を雇う(週 ${yen(supporterFees())})`,()=>{menuOpen=false;supportersOpen=true;render();});
   item('♥','騎手との関係','好感度・結婚',()=>{menuOpen=false;romanceOpen=true;render();});
+  item('📅','レースの先行登録','先の開催週の出走をまとめて登録',()=>{menuOpen=false;racePlanOpen=true;render();});
   item('🔑','オーナー権限コード','チートコードを入力',()=>{menuOpen=false;cheatPanelOpen=true;cheatMessage='';render();});
   const modes=[['normal','通常'],['fast','早送り'],['skip','毎回スキップ']];
   const vm=el(`<div class="menu-item static"><span class="mi-icon">🎬</span><span class="mi-body"><b>レース演出</b><span class="mi-seg"></span></span></div>`);
@@ -1851,6 +1860,113 @@ function raceCostFor(h){
 }
 function enteredHorses(){return S.horses.filter(h=>h.pendingAction&&h.pendingAction.type==='race'&&S.weekRaces[h.pendingAction.raceIdx]);}
 function shortRaceName(n){return (n||'').replace(/^[^\sぁ-んァ-ン一-龥A-Za-z0-9]+\s*/,'');}
+/* ===== レースの先行登録 =====
+   先の開催週の出走を前もって登録する。登録した週になると、その馬が出走表に入る(条件を満たさなければ見送り)。 */
+function plannableNamesInWeek(week){
+  const cp=calendarParts(week), month=cp.month, wom=weekOfMonth(week);
+  const out=[];
+  const add=n=>{if(n&&!out.includes(n))out.push(n);};
+  CROWN_RACES.filter(c=>weekInWindow(week,c.m,c.d)).forEach(c=>add(c.name));
+  thisWeeks(GRADE_RACES,month,wom).forEach(g=>add(g.name));
+  thisWeeks(JRA_RACES,month,wom).forEach(g=>add(g.name));
+  thisWeeks(JRA_TURF_RACES.filter(g=>!CROWN_RACES.some(c=>c.name===g.name)),month,wom).forEach(g=>add(g.name));
+  thisWeeks(OVERSEAS_RACES,month,wom).forEach(g=>add(g.name));
+  thisWeeks(OVERSEAS_TURF_RACES,month,wom).forEach(g=>add(g.name));
+  thisWeeks(LOCAL_TURF_RACES,month,wom).forEach(g=>add(g.name));
+  return out;
+}
+function planNameList(){
+  const s=new Set();
+  [...GRADE_RACES,...JRA_RACES,...JRA_TURF_RACES,...OVERSEAS_RACES,...OVERSEAS_TURF_RACES,...LOCAL_TURF_RACES,...CROWN_RACES].forEach(g=>s.add(g.name));
+  return [...s].sort((a,b)=>b.length-a.length); // 長い名前から照合(桜花賞(浦和)と桜花賞を取り違えないため)
+}
+function planKeyOf(r){const s=shortRaceName(r.name);return planNameList().find(n=>s.includes(n))||null;}
+function racePlanCandidates(){
+  const out=[];
+  for(let w=S.week+1;w<=S.week+52;w++){
+    const cp=calendarParts(w);
+    plannableNamesInWeek(w).forEach(name=>out.push({week:w,name,month:cp.month,yi:cp.yearIndex,wom:weekOfMonth(w)}));
+  }
+  return out;
+}
+function racePlanToggle(horseId,name,week){
+  S.racePlans=S.racePlans||[];
+  const same=S.racePlans.find(p=>p.horseId===horseId&&p.week===week&&p.race===name);
+  if(same){
+    S.racePlans=S.racePlans.filter(p=>p!==same);
+    toast('先行登録を取り消しました');
+  } else {
+    const other=S.racePlans.find(p=>p.horseId===horseId&&p.week===week);
+    S.racePlans=S.racePlans.filter(p=>p!==other);
+    S.racePlans.push({id:uid(),horseId,race:name,week});
+    toast(other?`同じ週の登録を「${other.race}」から差し替えました`:'先行登録しました');
+  }
+  scheduleSave();render();
+}
+function applyRacePlans(report){
+  S.racePlans=(S.racePlans||[]).filter(p=>p.week>=S.week&&S.horses.some(h=>h.id===p.horseId));
+  S.racePlans.filter(p=>p.week===S.week).forEach(p=>{
+    const h=S.horses.find(x=>x.id===p.horseId);
+    const idx=S.weekRaces.findIndex(r=>planKeyOf(r)===p.race);
+    const opt=idx>=0?eligibleRacesFor(h).find(o=>o.i===idx):null;
+    if(!opt){
+      report.push({type:'notice',text:`${h.name}の先行登録「${p.race}」は、出走条件を満たさないため見送りになった。`});
+      return;
+    }
+    h.pendingAction={type:'race',raceIdx:idx,jockeyKey:null,by:'owner'};
+    h.ownerChoiceWeek=S.week;
+    report.push({type:'notice',text:`先行登録どおり、${h.name}が${shortRaceName(S.weekRaces[idx].name)}に出走することになった。参戦費用は出走週に支払う。`});
+  });
+  S.racePlans=S.racePlans.filter(p=>p.week>S.week);
+}
+function renderRacePlanModal(){
+  S.racePlans=S.racePlans||[];
+  const overlay=el(`<div class="modal-overlay"></div>`);
+  const box=el(`<div class="modal-box"></div>`);
+  box.appendChild(el(`<div class="modal-title">📅 レースの先行登録</div>`));
+  box.appendChild(el(`<div class="modal-sub">先の開催週の出走を、まとめて登録できます。登録した週になると、その馬が自動で出走表に入ります。出走条件は、その週の時点で判定されます。</div>`));
+  if(!S.horses.length){
+    box.appendChild(el(`<div class="modal-sub">出走させる馬がいません。</div>`));
+  } else {
+    if(!racePlanHorseId||!S.horses.some(h=>h.id===racePlanHorseId)) racePlanHorseId=S.horses[0].id;
+    const pick=el(`<div class="rp-horses"></div>`);
+    S.horses.forEach(h=>{
+      const b=el(`<button class="ctl-btn ${h.id===racePlanHorseId?'active':''}">${h.name}</button>`);
+      b.onclick=()=>{racePlanHorseId=h.id;render();};
+      pick.appendChild(b);
+    });
+    box.appendChild(pick);
+    const list=el(`<div class="rp-list"></div>`);
+    let lastKey='';
+    racePlanCandidates().forEach(c=>{
+      const key=`${c.yi}-${c.month}`;
+      if(key!==lastKey){list.appendChild(el(`<div class="rp-month">開業${c.yi}年目 ${c.month}月</div>`));lastKey=key;}
+      const planned=S.racePlans.find(p=>p.horseId===racePlanHorseId&&p.week===c.week&&p.race===c.name);
+      const row=el(`<div class="rp-row ${planned?'on':''}"><span class="rp-when">${c.month}月${c.wom+1}週</span><b>${shortRaceName(c.name)}</b></div>`);
+      const b=el(`<button class="ctl-btn ${planned?'active':''}">${planned?'登録済 ✕':'登録'}</button>`);
+      b.onclick=()=>racePlanToggle(racePlanHorseId,c.name,c.week);
+      row.appendChild(b);
+      list.appendChild(row);
+    });
+    box.appendChild(list);
+    box.appendChild(el(`<div class="rp-month">登録中の先行登録(${S.racePlans.length}件)</div>`));
+    if(!S.racePlans.length) box.appendChild(el(`<div class="modal-sub">まだ登録はありません。</div>`));
+    S.racePlans.slice().sort((a,b)=>a.week-b.week).forEach(p=>{
+      const h=S.horses.find(x=>x.id===p.horseId);
+      const cp=calendarParts(p.week);
+      const row=el(`<div class="rp-row"><span class="rp-when">開業${cp.yearIndex}年目<br>${cp.month}月${weekOfMonth(p.week)+1}週</span><b>${h?h.name:'(引退・不明)'} ・ ${shortRaceName(p.race)}</b></div>`);
+      const x=el(`<button class="ctl-btn">取消</button>`);
+      x.onclick=()=>{S.racePlans=S.racePlans.filter(q=>q!==p);scheduleSave();render();};
+      row.appendChild(x);
+      box.appendChild(row);
+    });
+  }
+  const close=el(`<button class="modal-next">閉じる</button>`);
+  close.onclick=()=>{racePlanOpen=false;render();};
+  box.appendChild(close);
+  overlay.appendChild(box);
+  return overlay;
+}
 function renderWeekPlan(){
   const ent=enteredHorses();
   const cost=ent.reduce((s,h)=>s+raceCostFor(h),0);
@@ -1868,6 +1984,9 @@ function renderWeekPlan(){
     clr.onclick=()=>{S.horses.forEach(h=>{h.pendingAction=null;h.ownerChoiceWeek=S.week;});toast('今週の出走をすべて取り消しました');render();};
     box.appendChild(clr);
   }
+  const rpb=el(`<button class="link-btn">📅 先の週のレースを先行登録する</button>`);
+  rpb.onclick=()=>{racePlanOpen=true;render();};
+  box.appendChild(rpb);
   return box;
 }
 const FILLY_ONLY=['スパーキングレディーカップ','エンプレス杯','クイーン賞','阪神ジュベナイルフィリーズ'];
@@ -2259,7 +2378,7 @@ function crownLabelForRace(name){
 /* ================= 偉業ニュース ================= */
 function addFeat(report,f){
   if(!S.feats) S.feats=[];
-  const item={week:S.week,...f};
+  const item={week:S.week,body:'',...f};
   S.feats.push(item);
   if(S.feats.length>80) S.feats.shift();
   addNews(`🏆 ${f.title}`,'feat');
@@ -2304,12 +2423,15 @@ function checkFeats(r,field,report,sim){
     }
   });
   // 地方馬の中央G1 / 海外G1
-  if(/JRA・G1/.test(g)) addFeat(report,{kind:'jraG1',title:`地方馬${h.name}、中央G1「${short}」制覇!`,
-    body:`${vName}で中央の強豪を撃破。地方所属馬による中央G1制覇は競馬界でも語り継がれる偉業。`});
+  if(/JRA・G1/.test(g)){
+    const local=horseRegion(h)!=='jra'; // 中央所属の馬には「地方馬」と言わない
+    addFeat(report,{kind:'jraG1',title:local?`地方馬${h.name}、中央G1「${short}」制覇!`:`${h.name}、中央G1「${short}」制覇!`,
+      body:local?`${vName}で中央の強豪を撃破。地方所属馬による中央G1制覇は競馬界でも語り継がれる偉業。`:`${vName}で中央の強豪を撃破。中央所属馬として堂々の制覇。`});
+  }
   if(/海外・G1/.test(g)){
     const arc=/凱旋門賞/.test(r.name);
     addFeat(report,{kind:'overseas',title:arc?`日本競馬の悲願!${h.name}が凱旋門賞制覇`:`${h.name}、海外G1「${short}」制覇!`,
-      body:arc?`パリロンシャンの直線で欧州の強豪を退け、日本調教馬の悲願だった凱旋門賞を地方所属馬が制した。`:`${vName}で世界の強豪を破る快挙。地方競馬から世界の頂点へ。`});
+      body:arc?`パリロンシャンの直線で欧州の強豪を退け、日本調教馬の悲願だった凱旋門賞を${horseRegion(h)==='jra'?'中央所属馬':'地方所属馬'}が制した。`:`${vName}で世界の強豪を破る快挙。${horseRegion(h)==='jra'?'中央から世界の頂点へ。':'地方競馬から世界の頂点へ。'}`});
   }
   // G1級の通算勝利数
   const g1n=(h.history||[]).filter(x=>x.rank===1&&isG1Grade(x.grade)).length;
@@ -3577,7 +3699,7 @@ function updatePlayerRecords(h,r,f,report){
   if(r.grade){
     if(f.rank===1){
       h.gradeStreak=(h.gradeStreak||0)+1;
-      if(h.gradeStreak===3||h.gradeStreak===5) addFeat(report,{kind:'streak',title:`${h.name}、無敗で重賞${h.gradeStreak}連勝!`});
+      if(h.gradeStreak===3||h.gradeStreak===5) addFeat(report,{kind:'streak',title:`${h.name}、無敗で重賞${h.gradeStreak}連勝!`,body:`負けなしで重賞を${h.gradeStreak}連勝。勝ち続ける強さが光る。`});
     } else h.gradeStreak=0;
   }
   if(f.rank===1&&isG1Grade(r.grade)){
@@ -3588,11 +3710,11 @@ function updatePlayerRecords(h,r,f,report){
       if(!arr.includes(yi)) arr.push(yi);
       if(arr.includes(yi-1)){
         h.repeatNow=true;
-        addFeat(report,{kind:'repeat',title:`${h.name}、${base}連覇!`});
+        addFeat(report,{kind:'repeat',title:`${h.name}、${base}連覇!`,body:`同じG1を2年続けて制覇。連覇は名馬の証。`});
       }
     }
-    if(h.homebred) addFeat(report,{kind:'breeder',title:`自家生産の${h.name}、G1「${base||r.name}」制覇!生産者の勲章`});
-    if(h.sireName&&ownStallions().some(x=>x.name===h.sireName)) addFeat(report,{kind:'second',title:`${h.sireName}の産駒${h.name}、G1「${base||r.name}」制覇!二代目の栄光`});
+    if(h.homebred) addFeat(report,{kind:'breeder',title:`自家生産の${h.name}、G1「${base||r.name}」制覇!生産者の勲章`,body:`自分の牧場で生まれた馬がG1を制覇。生産者として大きな勲章。`});
+    if(h.sireName&&ownStallions().some(x=>x.name===h.sireName)) addFeat(report,{kind:'second',title:`${h.sireName}の産駒${h.name}、G1「${base||r.name}」制覇!二代目の栄光`,body:`自家製の種牡馬の産駒がG1を制覇。種牡馬としての評価が一段上がる。`});
   }
 }
 /* 解放条件の進み具合(数で測れる条件だけ数字を出す) */
@@ -4932,7 +5054,8 @@ function newGameState(){
   return {
     week:1,
     money:START_MONEY,
-    horses:[makeHorse(2,true)],
+    horses:[],
+    starterChoices:[makeHorse(2,true),makeHorse(2,true),makeHorse(2,true)], // 最初の1頭は候補から自分で選ぶ
     market:[makeHorse(randInt(2,9)),makeHorse(randInt(2,9)),makeHorse(randInt(2,9)),makeHorse(randInt(2,9))],
     weekRaces:pickWeekRaces(1),
     news:[{week:0,text:"地方競馬の馬主として登録した。まずは手持ちの1頭を預ける厩舎を決めよう。",cls:""}],
@@ -5385,7 +5508,7 @@ function simulateRace(r,field,pace){
 /* 所有馬・引退馬・他厩舎の馬・市場の馬と名前がかぶらないようにする */
 function uniqueHorseName(){
   let used;
-  try{used=npcUsedNames();if(typeof S!=='undefined'&&S){[S.market,S.summerSaleMarket,S.mixSaleMarket,S.secondSaleMarket,S.osSaleMarket,S.mixLeftover].forEach(l=>(l||[]).forEach(h=>used.add(h.name)));}}catch(e){used=new Set();}
+  try{used=npcUsedNames();if(typeof S!=='undefined'&&S){[S.horses,S.retired,S.market,S.summerSaleMarket,S.mixSaleMarket,S.secondSaleMarket,S.osSaleMarket,S.mixLeftover,S.homebreds].forEach(l=>(l||[]).forEach(h=>used.add(h.name)));}}catch(e){used=new Set();}
   for(let i=0;i<120;i++){const n=PREFIXES[randInt(0,PREFIXES.length-1)]+SUFFIXES[randInt(0,SUFFIXES.length-1)];if(!used.has(n))return n;}
   return PREFIXES[randInt(0,PREFIXES.length-1)]+SUFFIXES[randInt(0,SUFFIXES.length-1)];
 }
@@ -5575,7 +5698,7 @@ function pickWeekRacesRaw(week){
       travelFee:220000,
       surface:'turf',
       prize:isG1?[18000000,6000000,2500000]:[9000000,3300000,1400000],
-      req:g.age2?{age:'2',sex:g.sex||null,min:1}:undefined,minAge:g.minAge
+      req:g.age2?{age:'2',sex:g.sex||null,min:1}:g.age3?{age:'3',sex:null,min:1}:undefined,minAge:g.minAge
     });
   });
   // 海外芝挑戦。世界最高峰の芝の祭典。史実の開催月のみ。
@@ -5608,6 +5731,8 @@ let activeTab='stable';
 let raceViewMode='normal'; // レース演出: 'normal'通常 / 'fast'早送り / 'skip'毎回スキップ(結果へ直行)
 let modalQueue=[];
 let modalIndex=0;
+let racePlanOpen=false;
+let racePlanHorseId=null;
 let cheatPanelOpen=false;
 let cheatMessage='';
 let cheatMessageOk=false;
@@ -5661,11 +5786,33 @@ function makeEmperorHorse(){
   h.price=0;
   return h;
 }
+/* 最初の1頭を候補の中から選ぶ画面 */
+function renderStarterModal(){
+  const overlay=el(`<div class="modal-overlay"></div>`);
+  const box=el(`<div class="modal-box"></div>`);
+  box.appendChild(el(`<div class="modal-title">最初の1頭を選ぶ</div>`));
+  box.appendChild(el(`<div class="modal-sub">2歳の候補馬から、最初に預ける1頭を選びます。能力と血統を見比べてください。馬名は次の画面でつけます。</div>`));
+  S.starterChoices.forEach((h,i)=>{
+    const coat=coatInfo(h.coat);
+    const card=el(`<div class="horse-card"></div>`);
+    card.appendChild(el(`<div class="horse-top"><div class="horse-avatar">${horseIconSVG(h)}</div><div style="flex:1"><div class="horse-name">候補${i+1}</div><div class="horse-meta">${h.sex} / 2歳 / ${coat.name}${h.blaze?'・流星':''}</div></div></div>`));
+    card.appendChild(el(`<div class="pedigree-line">父:<b>${h.sireName}</b> 母:<b>${h.damName}</b> 母父:<b>${h.damSireName}</b></div>`));
+    const bars=el(`<div class="bars"></div>`);
+    bars.innerHTML=statBar('スピード',h.speed,'speed')+statBar('スタミナ',h.stamina,'stamina')+statBar('根性',h.guts,'guts')+statBar('ダート適性',h.dirtApt,'dirt')+statBar('芝適性',h.turfApt,'turf');
+    card.appendChild(bars);
+    const b=el(`<button class="modal-next">この馬を選ぶ</button>`);
+    b.onclick=()=>{S.horses=[h];S.starterChoices=null;admissionName='';admissionHorseId=h.id;admissionMode='start';render();};
+    card.appendChild(b);
+    box.appendChild(card);
+  });
+  overlay.appendChild(box);
+  return overlay;
+}
 function startNewGame(){
   S=newGameState();
   ensureNpcWorld();
   ensureJockeyWorld();
-  admissionHorseId=S.horses[0].id;
+  admissionHorseId=null;
   admissionMode='start';
 }
 
@@ -5808,6 +5955,8 @@ function render(){
   let key='';
   if(resumePrompt){
     key='resume';app.appendChild(renderResumePrompt());
+  } else if(S.starterChoices&&S.starterChoices.length&&!S.horses.length){
+    key='starter';app.appendChild(renderStarterModal());
   } else if(autoState){
     key='auto';app.appendChild(renderAutoProgress());
   } else if(autoSetupOpen){
@@ -5844,6 +5993,8 @@ function render(){
     key='hd:'+horseDetail.id;app.appendChild(closable(renderHorseDetailModal(),()=>{horseDetail=null;}));
   } else if(romanceOpen){
     key='rom';app.appendChild(closable(renderRomancePanel(),()=>{romanceOpen=false;}));
+  } else if(racePlanOpen){
+    key='rplan';app.appendChild(closable(renderRacePlanModal(),()=>{racePlanOpen=false;}));
   } else if(cheatPanelOpen){
     key='cheat';app.appendChild(closable(renderCheatPanel(),()=>{cheatPanelOpen=false;}));
   } else if(helpOpen){
@@ -6502,6 +6653,7 @@ function advanceWeek(opts){
   }
 
   S.weekRaces=pickWeekRaces(S.week);
+  applyRacePlans(report);
   S.totals.prize+=prizeTotal;
   S.totals.upkeep+=upkeep;
 
