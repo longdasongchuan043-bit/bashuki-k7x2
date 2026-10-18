@@ -344,6 +344,10 @@ main{flex:1;padding:14px 14px 100px;}
 .rp-row b{flex:1;font-size:13px;}
 .rp-horses{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;}
 .rp-list{max-height:45vh;overflow:auto;}
+.lin-tree{list-style:none;margin:4px 0 4px 14px;padding-left:10px;border-left:1px dashed rgba(232,185,75,.4);}
+.lin-tree li{margin:4px 0;font-size:12px;}
+.lin-win{font-size:10px;color:#E8B94B;border:1px solid rgba(232,185,75,.5);border-radius:3px;padding:0 4px;margin-left:4px;}
+.lin-root{font-size:12px;margin-top:6px;}
 .confirm-box{max-width:420px;}
 .confirm-text{font-size:13px;line-height:1.8;margin:6px 0 14px;color:var(--text);}
 .confirm-row{display:flex;gap:8px;}
@@ -677,6 +681,10 @@ const CLASSES=[
 ];
 let STABLE_CAP=6; // 馬主が所有できる頭数の上限
 const START_MONEY=3000000;
+const INSURANCE_WEEKLY=3000; // 故障保険の週額(1頭あたり)
+const PLAN_DEADLINE_WEEKS=3; // 先行登録の締切(開催の何週前まで)
+const PLAN_CANCEL_FEE=100000; // 締切後の取消・差し替えの取消料
+const GELDING_FEE=300000; // 去勢(セン馬化)の獣医費用。元に戻せない
 const TRANSFER_FEE=30000; // 転厩(厩舎の移動)にかかる輸送費など
 
 /* 調教師(架空)。馬は必ずどれかの厩舎に預け、調教は調教師が行う。
@@ -705,7 +713,7 @@ function trainerOf(h){return trainerByKey(h.trainerKey);}
 function horseAvg(h){return (h.speed+h.stamina+h.guts)/3;}
 function trainerCount(key,excludeId){return S.horses.filter(h=>h.trainerKey===key&&h.id!==excludeId).length;}
 function trainerFee(h){if(h.layoff) return Math.round(LAYOFF[h.layoff.type].fee*shareOf(h));const t=trainerOf(h);return t?Math.round(t.fee*shareOf(h)):0;}
-function weeklyFees(){return S.horses.reduce((s,h)=>s+trainerFee(h),0);}
+function weeklyFees(){return S.horses.reduce((s,h)=>s+trainerFee(h)+(h.insured?INSURANCE_WEEKLY:0),0);}
 function bumpStat(v,g){return v>=100?v:Math.min(100,v+g);}
 
 /* 調教師が1頭の馬に対して行う週あたりの調教/休養の判断。 */
@@ -852,9 +860,10 @@ const SALE_FARMS={
   big:['北辰ファーム','蒼穹ファーム','銀嶺ホースパーク'],
   mid:['日高ひかり牧場','新冠ブルーム牧場','静内みどり牧場'],
   small:['浦河 山口牧場','三石 高橋牧場','様似 佐藤ファーム'],
-  tiny:['えりも 村上牧場','門別 木下牧場','平取 小林牧場']
+  tiny:['えりも 村上牧場','門別 木下牧場','平取 小林牧場'],
+  large:['新ひだか 東陽牧場','鵡川 大樹ファーム','安平 光栄牧場']
 };
-const SALE_FARM_LABEL={big:'大手',mid:'中堅',small:'中小',tiny:'零細'};
+const SALE_FARM_LABEL={big:'大手',large:'大',mid:'中',small:'小',tiny:'零細'};
 const SALE_TIER_NOTE={elite:'👑 超良血・大手牧場の看板候補',good:'⭐ 良血馬',mid:'中堅牧場の期待馬',unknown:'無名血統'};
 function saleFarm(size){const l=SALE_FARMS[size];return {size,name:l[randInt(0,l.length-1)]};}
 function manYen(manMin,manMax,skew,unitMan){
@@ -868,9 +877,9 @@ function refreshHorseTraits(h){
   h.runStyle=pickRunStyle(h.speed,h.stamina,h.guts);
   h.optDist=computeOptDist(h);
 }
-function makeMixSaleHorse(){
+function makeMixSaleHorse(forcedTier,forcedFarm){
   const x=Math.random();
-  const tier=x<0.12?'elite':x<0.4?'good':x<0.72?'mid':'unknown';
+  const tier=forcedTier||(x<0.12?'elite':x<0.4?'good':x<0.72?'mid':'unknown');
   const age=1; // ミックスセールは1歳馬のセール
   const h=makeHorse(age,false);
   let [lo,hi]={elite:[68,92],good:[52,72],mid:[38,56],unknown:[20,45]}[tier];
@@ -895,8 +904,9 @@ function makeMixSaleHorse(){
   else price=manYen(300,700,1.2,10);
   if(gem) price=Math.round(price*1.3/100000)*100000;
   if(h.uniqueSkill && tier==='elite') price=Math.round(price*1.25/1000000)*1000000;
+  if(forcedFarm) price=Math.round(price*farmPriceMul(forcedFarm.name,forcedFarm.size)/10000)*10000; // 人気のない牧場は安い
   h.price=price;
-  h.farm=saleFarm(tier==='elite'?'big':tier==='good'?(Math.random()<0.6?'big':'mid'):tier==='mid'?(Math.random()<0.6?'mid':'small'):(Math.random()<0.5?'small':'tiny'));
+  h.farm=forcedFarm||saleFarm(tier==='elite'?'big':tier==='good'?(Math.random()<0.6?'big':'mid'):tier==='mid'?(Math.random()<0.6?'mid':'small'):(Math.random()<0.5?'small':'tiny'));
   h.saleKind='mix';
   h.saleNote=SALE_TIER_NOTE[tier];
   h.pastHistory=null;
@@ -928,6 +938,113 @@ function toSecondSale(h){
   h.saleKind='second';
   h.saleNote='ミックスセールで売れ残り';
   return h;
+}
+/* ===== 庭先取引(牧場を訪ねて1歳馬を買う)・牧場の人気 ===== */
+function farmPopOf(name,size){
+  const d={tiny:12,small:28,mid:50,large:70,big:90}[size]||30;
+  return (S.farmPop&&S.farmPop[name]!=null)?S.farmPop[name]:d;
+}
+function farmPriceMul(name,size){return 0.8+farmPopOf(name,size)/250;}
+function farmPopBump(name,size,amt){
+  S.farmPop=S.farmPop||{};
+  S.farmPop[name]=clamp(farmPopOf(name,size)+amt,0,100);
+}
+function farmStockFor(farm){
+  S.farmStock=S.farmStock||{};
+  const yi=calendarParts(S.week).yearIndex;
+  const cur=S.farmStock[farm.name];
+  if(cur&&cur.y===yi) return cur.horses;
+  const pool={tiny:['unknown','unknown','mid'],small:['unknown','mid','good'],mid:['mid','good','good'],large:['mid','good','elite'],big:['good','elite','elite']}[farm.size]||['mid'];
+  const horses=[0,1,2].map(()=>makeMixSaleHorse(pool[randInt(0,pool.length-1)],{size:farm.size,name:farm.name}));
+  S.farmStock[farm.name]={y:yi,horses};
+  return horses;
+}
+function privatePurchase(h){
+  if(S.horses.length>=STABLE_CAP){toast('厩舎が満杯です');return;}
+  if(S.money<h.price){toast('資金が足りません');return;}
+  const farm=h.farm;
+  S.money-=h.price;
+  h.pendingAction=null;h.trainerKey=null;
+  h.boughtFrom=farm?farm.name:null;h.boughtFromSize=farm?farm.size:null;
+  S.horses.push(h);
+  removeFromMarkets(h.id);
+  if(farm&&S.farmStock&&S.farmStock[farm.name]) S.farmStock[farm.name].horses=S.farmStock[farm.name].horses.filter(x=>x.id!==h.id);
+  if(farm){
+    const bump={tiny:5,small:4,mid:2,large:1,big:0}[farm.size]||0;
+    farmPopBump(farm.name,farm.size,bump);
+    if(farm.size==='tiny'||farm.size==='small') adjustRep(0.6,0.4,`${farm.name}から庭先で買い付けた(人気のない牧場を支えた)`);
+  }
+  addNews(`${farm?farm.name:'牧場'}を訪ねて、1歳馬を庭先取引で${yen(h.price)}で購入した。`,'money-out');
+  toast(`${farm?farm.name:'牧場'}の1歳馬を購入しました`);
+  render();
+}
+/* ===== 最強のサポーター(オーナー権限で雇用):全馬の総合の強さを★5段階で見られる ===== */
+function starSupporterOn(){return !!(S.supporters&&S.supporters.star);}
+function starRating(h){
+  const avg=(h.speed+h.stamina+h.guts)/3+(h.uniqueSkill?3:0);
+  return avg>=72?5:avg>=62?4:avg>=52?3:avg>=42?2:1;
+}
+function starText(n){return '★'.repeat(n)+'☆'.repeat(5-n);}
+function renderStarSupporter(){
+  const overlay=el(`<div class="modal-overlay"></div>`);
+  const box=el(`<div class="modal-box"></div>`);
+  const groups=[
+    ['所有馬',S.horses],
+    ['市場・セリ',[...(S.market||[]),...(S.mixSaleMarket||[]),...(S.secondSaleMarket||[]),...(S.summerSaleMarket||[]),...(S.osSaleMarket||[])]],
+    ['庭先(牧場の1歳馬)',Object.values(S.farmStock||{}).flatMap(x=>x.horses||[])]
+  ];
+  box.appendChild(el(`<div class="modal-title">🔭 最強のサポーター</div>`));
+  box.appendChild(el(`<div class="modal-sub">どんな馬でも、総合の強さを★5段階で正確に見立てます(血統や馬体の見立ての誤差はありません)。★5が最も強い馬です。</div>`));
+  groups.forEach(([label,list])=>{
+    const sorted=list.slice().sort((a,b)=>starRating(b)-starRating(a)||(b.speed+b.stamina+b.guts)-(a.speed+a.stamina+a.guts));
+    box.appendChild(el(`<div class="rp-month">${label}(${sorted.length}頭)</div>`));
+    if(!sorted.length) box.appendChild(el(`<div class="modal-sub">いません。</div>`));
+    const wrap=el(`<div class="rp-list"></div>`);
+    sorted.forEach(h=>{
+      const n=starRating(h);
+      const avg=Math.round((h.speed+h.stamina+h.guts)/3);
+      wrap.appendChild(el(`<div class="rp-row ${n===5?'on':''}"><b>${h.name||'(仮名)'} <small>${h.sex}${h.age}歳</small></b><span class="rp-when" style="min-width:0;color:#E8B94B;">${starText(n)}</span><span class="rp-when" style="min-width:0;">総合${avg}${h.uniqueSkill?' ✨':''}</span></div>`));
+    });
+    box.appendChild(wrap);
+  });
+  const close=el(`<button class="modal-next">閉じる</button>`);
+  close.onclick=()=>{starOpen=false;render();};
+  box.appendChild(close);
+  overlay.appendChild(box);
+  return overlay;
+}
+function renderFarmVisit(){
+  const overlay=el(`<div class="modal-overlay"></div>`);
+  const box=el(`<div class="modal-box"></div>`);
+  box.appendChild(el(`<div class="modal-title">🏡 牧場を訪ねる(庭先取引)</div>`));
+  box.appendChild(el(`<div class="modal-sub">牧場へ直接出向いて、1歳馬を庭先で買えます。セリより安く、競争もありません。人気の低い牧場から買うと、その牧場の人気が上がり、あなたの評判も上がります。</div>`));
+  const tb=el(`<div class="rp-horses"></div>`);
+  ['tiny','small','mid','large','big'].forEach(t=>{
+    const b=el(`<button class="ctl-btn ${farmVisitTier===t?'active':''}">${SALE_FARM_LABEL[t]}</button>`);
+    b.onclick=()=>{farmVisitTier=t;render();};
+    tb.appendChild(b);
+  });
+  box.appendChild(tb);
+  SALE_FARMS[farmVisitTier].forEach(name=>{
+    const farm={size:farmVisitTier,name};
+    const star=Math.round(farmPopOf(name,farmVisitTier)/20);
+    box.appendChild(el(`<div class="rp-month">${name} <small>人気 ${'★'.repeat(star)}${'☆'.repeat(5-star)}</small></div>`));
+    const stock=farmStockFor(farm);
+    if(!stock.length) box.appendChild(el(`<div class="modal-sub">今年は1歳馬がいません。</div>`));
+    stock.forEach(h=>{
+      const row=el(`<div class="rp-row"><div style="flex:1;font-size:12px;"><b>${h.sex} ・ 父${h.sireName} ・ 母${h.damName}</b><br><small>${h.saleNote||''}${starSupporterOn()?' ・ 総合 '+starText(starRating(h)):''}</small></div><span class="rp-when" style="min-width:0;">${yen(h.price)}</span></div>`);
+      const can=S.horses.length<STABLE_CAP&&S.money>=h.price;
+      const b=el(`<button class="ctl-btn" ${can?'':'disabled'}>庭先で買う</button>`);
+      b.onclick=()=>privatePurchase(h);
+      row.appendChild(b);
+      box.appendChild(row);
+    });
+  });
+  const close=el(`<button class="modal-next">閉じる</button>`);
+  close.onclick=()=>{farmVisitOpen=false;render();};
+  box.appendChild(close);
+  overlay.appendChild(box);
+  return overlay;
 }
 function allSaleLists(){
   return [S.market,S.summerSaleMarket||[],S.mixSaleMarket||[],S.secondSaleMarket||[],S.osSaleMarket||[],S.mareSaleMarket||[]];
@@ -981,7 +1098,7 @@ function studScore(h){
   if(typeof TOP_SIRES!=='undefined' && TOP_SIRES.includes(h.sireName)) sc+=4;
   return Math.round(sc);
 }
-function sireEligible(h){const g=gradeSummary(h);return h.sex==='牡'&&(g.g1>=1||g.graded>=2);}
+function sireEligible(h){const g=gradeSummary(h);return h.sex==='牡'&&!h.gelded&&(g.g1>=1||g.graded>=2);}
 function studBasePrice(score){return Math.max(3000000,Math.round(Math.pow(Math.max(score-20,1),1.7)*250000/1000000)*1000000);}
 function mareBasePrice(score){return Math.max(1000000,Math.round(Math.pow(Math.max(score-15,1),1.6)*90000/500000)*500000);}
 function buildOffers(h,kind){
@@ -1801,6 +1918,10 @@ function renderMenu(){
   item('🏅','評判とファン',`徳 ${Math.round(S.rep)}(${repLabel(S.rep)})・ファン ${Math.round(S.fans)}`,()=>{menuOpen=false;repOpen=true;render();});
   item('🗣','サポーター',`馬体の見立て役を雇う(週 ${yen(supporterFees())})`,()=>{menuOpen=false;supportersOpen=true;render();});
   item('♥','騎手との関係','好感度・結婚',()=>{menuOpen=false;romanceOpen=true;render();});
+  if(starSupporterOn()) item('🔭','最強のサポーター','全馬の総合の強さを★で見る',()=>{menuOpen=false;starOpen=true;render();});
+  item('🧬','血統図鑑','牝系と種牡馬の成績を見る',()=>{menuOpen=false;pedigreeBookOpen=true;render();});
+  item('📈','収支の推移','所持金の年ごとの流れ',()=>{menuOpen=false;moneyOpen=true;render();});
+  item('📚','隠し種牡馬の図鑑','解放した種牡馬の条件を確認',()=>{menuOpen=false;sireBookOpen=true;render();});
   item('📅','レースの先行登録','先の開催週の出走をまとめて登録',()=>{menuOpen=false;racePlanOpen=true;render();});
   item('🔑','オーナー権限コード','チートコードを入力',()=>{menuOpen=false;cheatPanelOpen=true;cheatMessage='';render();});
   const modes=[['normal','通常'],['fast','早送り'],['skip','毎回スキップ']];
@@ -1889,14 +2010,27 @@ function racePlanCandidates(){
   }
   return out;
 }
+function sireStatLine(st){
+  if(!st||!st.runs) return 'まだ出走はない';
+  return `${st.runs}戦${st.wins}勝(3着内${st.top3}・重賞${st.gw}勝)`;
+}
+function racePlanFee(p){return p.week-S.week<PLAN_DEADLINE_WEEKS?PLAN_CANCEL_FEE:0;}
 function racePlanToggle(horseId,name,week){
   S.racePlans=S.racePlans||[];
   const same=S.racePlans.find(p=>p.horseId===horseId&&p.week===week&&p.race===name);
+  const other=same?null:S.racePlans.find(p=>p.horseId===horseId&&p.week===week);
+  if(!same&&week-S.week<PLAN_DEADLINE_WEEKS){toast('登録の締切を過ぎています');return;}
+  const target=same||other;
+  const fee=target?racePlanFee(target):0;
+  if(fee>0&&S.money<fee){toast('取消料の資金が足りません');return;}
+  if(fee>0){
+    S.money-=fee;
+    addNews(`締切後に先行登録を${same?'取り消した':'差し替えた'}ため、取消料${yen(fee)}を支払った。`,'money-out');
+  }
   if(same){
     S.racePlans=S.racePlans.filter(p=>p!==same);
-    toast('先行登録を取り消しました');
+    toast(fee?`先行登録を取り消しました(取消料 ${yen(fee)})`:'先行登録を取り消しました');
   } else {
-    const other=S.racePlans.find(p=>p.horseId===horseId&&p.week===week);
     S.racePlans=S.racePlans.filter(p=>p!==other);
     S.racePlans.push({id:uid(),horseId,race:name,week});
     toast(other?`同じ週の登録を「${other.race}」から差し替えました`:'先行登録しました');
@@ -1919,12 +2053,143 @@ function applyRacePlans(report){
   });
   S.racePlans=S.racePlans.filter(p=>p.week>S.week);
 }
+/* ===== 馬体重・近走・収支・血統図鑑 ===== */
+function bodyWeightOf(h){if(h.bodyW==null) h.bodyW=(h.sex==='牡'?480:455)+randInt(-25,25);return h.bodyW;}
+function lineChartHtml(pts,opts){
+  if(pts.length<2) return `<div class="modal-sub">${opts.empty}</div>`;
+  const W=300,H=120,P=22;
+  const vals=pts.map(p=>p.y);
+  const mn=Math.min(...vals),mx=Math.max(...vals),span=(mx-mn)||1;
+  const X=i=>P+i*(W-2*P)/(pts.length-1);
+  const Y=v=>(H-18)-((v-mn)/span)*(H-30);
+  const poly=pts.map((p,i)=>`${X(i).toFixed(1)},${Y(p.y).toFixed(1)}`).join(' ');
+  const dots=pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="2.5" fill="#E8B94B"><title>${p.x}: ${opts.fmt?opts.fmt(p.y):p.y}</title></circle>`).join('');
+  const labels=pts.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${H-4}" font-size="9" text-anchor="middle" fill="currentColor">${p.x}</text>`).join('');
+  return `<div class="ab-chart"><div class="section-label"><span>${opts.title}</span><span>${opts.right||''}</span></div><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${opts.title}"><polyline fill="none" stroke="#E8B94B" stroke-width="2" points="${poly}"/>${dots}${labels}</svg></div>`;
+}
+function weightChartHtml(h){
+  const pts=(h.bwHist||[]).slice(-12).map(x=>({x:`${x.y}年`,y:x.w}));
+  return lineChartHtml(pts,{title:'馬体重の推移',right:'kg',empty:'馬体重は、レースに出るたびに記録されます。',fmt:v=>v+'kg'});
+}
+function recentFormHtml(h){
+  const hist=(h.history||[]).slice(-3).reverse();
+  if(!hist.length) return `<div class="recent-form">近走の記録はまだありません</div>`;
+  const items=hist.map(x=>`${x.rank}着 ${shortRaceName(x.raceName)}(${x.jockeyName||'-'})`).join(' / ');
+  const bw=h.bwHist||[];
+  let wt='';
+  if(bw.length){
+    const last=bw[bw.length-1];
+    const d=bw.length>=2?last.w-bw[bw.length-2].w:null;
+    wt=` ・ 前走の馬体重 ${last.w}kg${d==null?'':` (${d>0?'+':''}${d}kg${d<=-8?'・大きく減っている':''})`}`;
+  }
+  return `<div class="recent-form">近走: ${items}${wt}</div>`;
+}
+function renderMoneyModal(){
+  const overlay=el(`<div class="modal-overlay"></div>`);
+  const box=el(`<div class="modal-box"></div>`);
+  const pts=(S.moneyHist||[]).slice(-12).map(x=>({x:`${x.y}年目`,y:x.money}));
+  box.appendChild(el(`<div class="modal-title">📈 収支の推移</div>`));
+  box.appendChild(el(`<div class="modal-sub">今の所持金 ${yen(S.money)} ・ 通算の賞金 ${yen(S.totals.prize)} ・ 通算の維持費 ${yen(S.totals.upkeep)}</div>`));
+  box.appendChild(el(lineChartHtml(pts,{title:'所持金の推移',right:'年末時点',empty:'年末の所持金は、1年が終わると記録されます。',fmt:v=>yen(v)})));
+  const close=el(`<button class="modal-next">閉じる</button>`);
+  close.onclick=()=>{moneyOpen=false;render();};
+  box.appendChild(close);
+  overlay.appendChild(box);
+  return overlay;
+}
+function renderPedigreeBook(){
+  const overlay=el(`<div class="modal-overlay"></div>`);
+  const box=el(`<div class="modal-box"></div>`);
+  const fams=Object.values(S.families||{}).filter(f=>f.runs>0).sort((a,b)=>b.gw-a.gw||b.top3-a.top3||b.runs-a.runs);
+  const sires=Object.entries(S.sireStats||{}).filter(([n,st])=>st.runs>0).sort((a,b)=>(b[1].gw-a[1].gw)||(b[1].wins-a[1].wins)||(b[1].runs-a[1].runs));
+  const own=new Set(ownStallions().map(x=>x.name));
+  box.appendChild(el(`<div class="modal-title">🧬 血統図鑑</div>`));
+  box.appendChild(el(`<div class="modal-sub">産駒が走った牝系と種牡馬の成績です。</div>`));
+  box.appendChild(el(`<div class="rp-month">自家系譜(繁殖牝馬ごと)</div>`));
+  const mares=ownedMares();
+  if(!mares.length) box.appendChild(el(`<div class="modal-sub">自家の繁殖牝馬がいると、ここで系譜を見られます。</div>`));
+  else {
+    const mb=el(`<div class="rp-horses"></div>`);
+    mares.forEach(m=>{
+      const b=el(`<button class="ctl-btn ${pedBookMareId===m.name?'active':''}">${m.name}</button>`);
+      b.onclick=()=>{pedBookMareId=m.name;render();};
+      mb.appendChild(b);
+    });
+    box.appendChild(mb);
+    if(pedBookMareId){
+      const kids=lineageTreeHtml(pedBookMareId,3);
+      box.appendChild(el(`<div>${kids?`<div class="lin-root"><b>${pedBookMareId}</b>の系譜</div>${kids}`:`<div class="modal-sub">${pedBookMareId}の産駒はまだいません。</div>`}</div>`));
+    }
+  }
+  const hcs=Object.values(S.hitCrosses||{}).sort((a,b)=>b.horses.length-a.horses.length);
+  box.appendChild(el(`<div class="rp-month">当たり配合の図鑑</div>`));
+  if(!hcs.length) box.appendChild(el(`<div class="modal-sub">自家生産馬が重賞を制すると、その配合が記録されます。</div>`));
+  hcs.forEach(hc=>box.appendChild(el(`<div class="rp-row"><b>${hc.sire} × ${hc.dam}</b><span class="rp-when" style="min-width:0;">重賞馬${hc.horses.length}頭(${hc.horses.slice(-2).join('、')})</span></div>`)));
+  box.appendChild(el(`<div class="rp-month">牝系</div>`));
+  if(!fams.length) box.appendChild(el(`<div class="modal-sub">まだ出走した牝系はありません。</div>`));
+  const fl=el(`<div class="rp-list"></div>`);
+  fams.forEach(f=>{
+    const hits=(f.hits||[]).slice(-2).map(x=>`${x.h}(${shortRaceName(x.r)})`).join('、');
+    fl.appendChild(el(`<div class="rp-row"><b>${f.root}牝系</b>${f.gw>=3?'<span class="lin-win">名門</span>':''}<span class="rp-when" style="min-width:0;">${f.runs}戦 3着内${f.top3}・重賞${f.gw}勝${hits?'<br>'+hits:''}</span></div>`));
+  });
+  box.appendChild(fl);
+  box.appendChild(el(`<div class="rp-month">種牡馬</div>`));
+  if(!sires.length) box.appendChild(el(`<div class="modal-sub">まだ産駒の出走はありません。</div>`));
+  const sl=el(`<div class="rp-list"></div>`);
+  sires.forEach(([n,st])=>{
+    sl.appendChild(el(`<div class="rp-row"><b>${n}${own.has(n)?'<small>(自家)</small>':''}</b><span class="rp-when" style="min-width:0;">${sireStatLine(st)}</span></div>`));
+  });
+  box.appendChild(sl);
+  const close=el(`<button class="modal-next">閉じる</button>`);
+  close.onclick=()=>{pedigreeBookOpen=false;render();};
+  box.appendChild(close);
+  overlay.appendChild(box);
+  return overlay;
+}
+/* ===== 血統の遊び:自家系譜・当たり配合・名門牝系・血統の幅 ===== */
+function allOwnHorses(){return [...S.horses,...(S.homebreds||[]),...(S.retired||[])];}
+function lineageTreeHtml(name,depth){
+  if(depth<=0) return '';
+  const kids=allOwnHorses().filter(x=>x.damName===name&&x.name!==name);
+  if(!kids.length) return '';
+  return `<ul class="lin-tree">${kids.map(k=>{
+    const g=gradeSummary(k);
+    const tag=(g.graded||g.g1)?`<span class="lin-win">重賞${g.graded}勝${g.g1?`・G1${g.g1}勝`:''}</span>`:'';
+    return `<li><b>${k.name}</b>${k.sex?` <small>${k.sex}</small>`:''} ${tag}${lineageTreeHtml(k.name,depth-1)}</li>`;
+  }).join('')}</ul>`;
+}
+function lineWidthText(st){
+  if(!st||!st.sire) return '記録なし';
+  const keys=new Set([st.sire,st.dam,st.ds,st.dd].filter(Boolean).map(n=>lineKeyOf(n)));
+  return `${keys.size}系統 ${'★'.repeat(keys.size)}`;
+}
+function renderSireBook(){
+  const overlay=el(`<div class="modal-overlay"></div>`);
+  const box=el(`<div class="modal-box"></div>`);
+  const names=Object.keys(SIRE_UNLOCKS);
+  const open=names.filter(n=>(S.unlockedSires||[]).includes(n)).length;
+  box.appendChild(el(`<div class="modal-title">📚 隠し種牡馬の図鑑</div>`));
+  box.appendChild(el(`<div class="modal-sub">解放した種牡馬の条件だけを表示します。未解放のものは条件も伏せています。 解放 ${open} / ${names.length}頭</div>`));
+  const list=el(`<div class="rp-list"></div>`);
+  names.forEach(n=>{
+    const ok=(S.unlockedSires||[]).includes(n);
+    list.appendChild(el(ok
+      ?`<div class="rp-row on"><b>✅ ${n}</b><span class="rp-when" style="min-width:0;">解放条件:${SIRE_UNLOCKS[n].cond}</span></div>`
+      :`<div class="rp-row"><b>？？？</b><span class="rp-when" style="min-width:0;opacity:.6;">未解放</span></div>`));
+  });
+  box.appendChild(list);
+  const close=el(`<button class="modal-next">閉じる</button>`);
+  close.onclick=()=>{sireBookOpen=false;render();};
+  box.appendChild(close);
+  overlay.appendChild(box);
+  return overlay;
+}
 function renderRacePlanModal(){
   S.racePlans=S.racePlans||[];
   const overlay=el(`<div class="modal-overlay"></div>`);
   const box=el(`<div class="modal-box"></div>`);
   box.appendChild(el(`<div class="modal-title">📅 レースの先行登録</div>`));
-  box.appendChild(el(`<div class="modal-sub">先の開催週の出走を、まとめて登録できます。登録した週になると、その馬が自動で出走表に入ります。出走条件は、その週の時点で判定されます。</div>`));
+  box.appendChild(el(`<div class="modal-sub">先の開催週の出走を、まとめて登録できます。登録した週になると、その馬が自動で出走表に入ります。出走条件は、その週の時点で判定されます。登録は開催の3週前まで。締切後の取消・差し替えには取消料(10万円)がかかります。</div>`));
   if(!S.horses.length){
     box.appendChild(el(`<div class="modal-sub">出走させる馬がいません。</div>`));
   } else {
@@ -1943,7 +2208,8 @@ function renderRacePlanModal(){
       if(key!==lastKey){list.appendChild(el(`<div class="rp-month">開業${c.yi}年目 ${c.month}月</div>`));lastKey=key;}
       const planned=S.racePlans.find(p=>p.horseId===racePlanHorseId&&p.week===c.week&&p.race===c.name);
       const row=el(`<div class="rp-row ${planned?'on':''}"><span class="rp-when">${c.month}月${c.wom+1}週</span><b>${shortRaceName(c.name)}</b></div>`);
-      const b=el(`<button class="ctl-btn ${planned?'active':''}">${planned?'登録済 ✕':'登録'}</button>`);
+      const closed=!planned&&c.week-S.week<PLAN_DEADLINE_WEEKS;
+      const b=el(`<button class="ctl-btn ${planned?'active':''}" ${closed?'disabled':''}>${planned?'登録済 ✕':closed?'締切済':'登録'}</button>`);
       b.onclick=()=>racePlanToggle(racePlanHorseId,c.name,c.week);
       row.appendChild(b);
       list.appendChild(row);
@@ -1956,7 +2222,7 @@ function renderRacePlanModal(){
       const cp=calendarParts(p.week);
       const row=el(`<div class="rp-row"><span class="rp-when">開業${cp.yearIndex}年目<br>${cp.month}月${weekOfMonth(p.week)+1}週</span><b>${h?h.name:'(引退・不明)'} ・ ${shortRaceName(p.race)}</b></div>`);
       const x=el(`<button class="ctl-btn">取消</button>`);
-      x.onclick=()=>{S.racePlans=S.racePlans.filter(q=>q!==p);scheduleSave();render();};
+      x.onclick=()=>racePlanToggle(p.horseId,p.race,p.week);
       row.appendChild(x);
       box.appendChild(row);
     });
@@ -3399,7 +3665,8 @@ function breedMare(m,s){
   const yi=calendarParts(S.week).yearIndex;
   m.matedYear=yi;
   S.money-=s.fee;
-  const conceived=Math.random()<clamp(0.88-(m.age>=16?(m.age-15)*0.05:0),0.5,0.9);
+  const famB=(((S.families||{})[m.family||m.name])||{gw:0}).gw>=3?0.04:0; // 名門牝系(重賞3勝以上)は受胎しやすい
+  const conceived=Math.random()<clamp(0.88+famB-(m.age>=16?(m.age-15)*0.05:0),0.5,0.92);
   if(conceived){
     m.pregnant={sire:s.name,fee:s.fee,own:!!s.own,week:S.week,due:S.week+48,y:yi};
     addNews(`${m.name}に${s.name}を種付け(種付料${yen(s.fee)})。受胎を確認した。出産予定は${calendarShort(S.week+48)}頃。`,'money-out');
@@ -3473,7 +3740,7 @@ function lineageStatAdd(h,f,r){
       if([3,6,10,15].includes(fam.gw)) addNews(`🌳 ${fam.root}牝系から重賞馬が出た(重賞${fam.gw}勝)。繁殖牝馬としての評価が上がりそう。`,'');
     }
   }
-  if((S.retired||[]).some(x=>x.kind==='sire'&&x.name===h.sireName)){
+  if(h.homebred||(S.retired||[]).some(x=>x.kind==='sire'&&x.name===h.sireName)){
     S.sireStats=S.sireStats||{};
     const st=S.sireStats[h.sireName]||(S.sireStats[h.sireName]={runs:0,top3:0,wins:0,gw:0,yr:{}});
     const y=st.yr[yi]||(st.yr[yi]={gw:0,w:0});
@@ -3607,7 +3874,7 @@ function renderFarm(){
   const mares=ownedMares(),foals=S.homebreds||[];
   const cal=calendarParts(S.week),inSeason=MATING_MONTHS.includes(cal.month);
   wrap.appendChild(el(`<div class="section-label"><span>牧場(自家生産)</span><span>繁殖牝馬 ${mares.length}頭 / 生産馬 ${foals.length}頭 ・ 週 ${yen(farmFees())}</span></div>`));
-  wrap.appendChild(el(`<div class="farm-season ${inSeason?'on':''}">${inSeason?'🌸 種付けシーズン中(2〜6月)。空胎の繁殖牝馬に種付けできます。':`種付けシーズンは2〜6月です(いまは${cal.month}月)。`}</div>`));
+    wrap.appendChild(el(`<div class="farm-season ${inSeason?'on':''}">${inSeason?'🌸 種付けシーズン中(2〜6月)。空胎の繁殖牝馬に種付けできます。':`種付けシーズンは2〜6月です(いまは${cal.month}月)。`}</div>`));
   const am=el(`<button class="ctl-btn ${S.autoMate?'active':''}" style="margin:4px 0 8px;">${S.autoMate?'🤖 期末の自動配合:オン':'🤖 期末の自動配合:オフ'}</button>`);
   am.onclick=()=>{S.autoMate=!S.autoMate;render();};
   wrap.appendChild(am);
@@ -3694,14 +3961,22 @@ function g1BaseName(name){
   return all.filter(n=>(name||'').includes(n)).sort((a,b)=>b.length-a.length)[0]||null;
 }
 function updatePlayerRecords(h,r,f,report){
-  h.repeatNow=false; // このレースで連覇したか(隠し種牡馬の判定用)
+  h.repeatNow=false;
   const yi=calendarParts(S.week).yearIndex;
-  if(r.grade){
-    if(f.rank===1){
-      h.gradeStreak=(h.gradeStreak||0)+1;
-      if(h.gradeStreak===3||h.gradeStreak===5) addFeat(report,{kind:'streak',title:`${h.name}、無敗で重賞${h.gradeStreak}連勝!`,body:`負けなしで重賞を${h.gradeStreak}連勝。勝ち続ける強さが光る。`});
-    } else h.gradeStreak=0;
+  if(h.homebred&&r.grade&&f.rank===1&&h.sireName&&h.damName){
+    S.hitCrosses=S.hitCrosses||{};
+    const k=h.sireName+'×'+h.damName;
+    const hc=S.hitCrosses[k]=S.hitCrosses[k]||{sire:h.sireName,dam:h.damName,horses:[]};
+    if(!hc.horses.includes(h.name)){
+      hc.horses.push(h.name);
+      if(hc.horses.length===1) addFeat(report,{kind:'cross',title:`当たり配合「${h.sireName}×${h.damName}」を発見!`,body:`この組み合わせから生まれた${h.name}が重賞を制した。同じ配合を試す価値がある。`});
+    }
   }
+  if(h.boughtFrom&&r.grade&&f.rank===1){
+    farmPopBump(h.boughtFrom,h.boughtFromSize,6);
+    addFeat(report,{kind:'bargain',title:`${h.boughtFrom}から買った${h.name}、重賞制覇!`,body:`人気のない牧場で見出した馬が、グレード競走を勝った。見る目と育成の勝利。${h.boughtFrom}の人気も上がった。`});
+  }
+  { const bw=bodyWeightOf(h); const w=bw+Math.round(((h.condition||70)-70)*0.08)+randInt(-4,4); (h.bwHist=h.bwHist||[]).push({w,y:yi,race:r.name}); if(h.bwHist.length>30) h.bwHist.shift(); }
   if(f.rank===1&&isG1Grade(r.grade)){
     const base=g1BaseName(r.name);
     if(base){
@@ -3757,6 +4032,8 @@ function renderMatingModal(){
     const s=all.find(x=>x.name===farmMatingPick);
     const pv=matingPreview(s,m);
     box.appendChild(el(`<div class="modal-title">${m.name} × ${s.name}</div>`));
+    box.appendChild(el(`<div class="modal-sub">産駒成績:${sireStatLine(S.sireStats&&S.sireStats[s.name])}</div>`));
+    if(s.sire) box.appendChild(el(`<div class="modal-sub">血統の幅:${lineWidthText(s)}(4代の父系・母系の種類)</div>`));
     box.appendChild(el(`<div class="modal-sub">種付料 <b>${yen(s.fee)}</b>(受胎条件:不受胎なら返金)/ ${s.own?'自分の種牡馬(元オーナー優待・半額)':(STUD_STATION_BY_KEY[s.st]||{}).name||''}<br>所持金 ${yen(S.money)}</div>`));
     const tmp={...pv.fp,coat:m.coat};
     box.appendChild(el(`<div class="pedigree-line" style="padding-left:0">${lineSummary(tmp)} ${pv.nick?`<span class="nick-badge">◎${pv.nick.label}</span>`:''}</div>`));
@@ -3787,7 +4064,7 @@ function renderMatingModal(){
   if(!list.length) box.appendChild(el(`<div class="modal-sub">該当する種牡馬がいません。${farmMatingFilter==='own'?'自分の馬を種牡馬入りさせると、ここに並びます。':''}</div>`));
   list.forEach(s=>{
     if(isSireLocked(s)){
-      box.appendChild(el(`<div class="trainer-card career-card blocked"><div class="trainer-head"><span class="trainer-name">？？？<small>未解放の種牡馬</small></span></div><div class="trainer-meta">条件: ${SIRE_UNLOCKS[s.name].cond}</div><div class="trainer-meta">進み具合: ${sireProgressText(s.name)}</div></div>`));
+      box.appendChild(el(`<div class="trainer-card career-card blocked"><div class="trainer-head"><span class="trainer-name">？？？<small>未解放の種牡馬</small></span></div></div>`));
       return;
     }
     const pv=matingPreview(s,m);
@@ -4166,6 +4443,15 @@ const INJURIES={
   fracture:{name:'骨折',w:[10,24],perm:2,desc:'剥離骨折・ヒビ。手術や長期休養が必要。'},
   tendon:{name:'屈腱炎',w:[30,56],perm:4,desc:'「競走馬の癌」とも呼ばれる腱の炎症。再発しやすい。'},
 };
+// 故障保険:長期の故障(10週以上)で保険金が支払われる
+function applyInsurance(h,inj){
+  if(!h.insured||!inj) return '';
+  const amt=inj.weeks>=30?1500000:inj.weeks>=10?500000:0;
+  if(amt<=0) return '';
+  S.money+=amt;
+  return `🛡 故障保険から${yen(amt)}が支払われた。`;
+}
+function withInsurance(h,inj){const t=applyInsurance(h,inj);return t?' '+t:'';} // 1回だけ支払う
 function rollInjury(h,ctx){
   // ctx: 'race' | 'train'
   const age=h.age||3,fr=h.frail==null?35:h.frail,old=age>=6?1:0;
@@ -5365,7 +5651,8 @@ function simulateRace(r,field,pace){
     const optD=f.optDist||dist;
     const dFit=(dist-optD)/800;
     const shortPen=dist<optD?1-clamp((optD-dist)/1000,0,0.4)*0.05:1;
-    const temper=f.temper==null?35:f.temper; // 気性(高いほど気性難)
+    // 去勢馬は気性が落ち着く。素質が高い馬ほど、落ち着いた分を走りに出せる(気性の影響が大きく薄れる)
+    const temper=f.gelded?35+((f.temper==null?35:f.temper)-35)*(1-0.4*(f.gene==null?0.5:f.gene)):(f.temper==null?35:f.temper); // 気性(高いほど気性難)
     const form=1+(f.dayForm!=null?f.dayForm*0.025:(Math.random()-0.5)*0.05)*noiseScale*(1+Math.max(0,temper-35)/120); // 当日の気配(気性難ほどムラ)
     f.kakari=Math.random()<Math.max(0,temper-30)/220*(f.irekomi?2.2:1); // 掛かる(イレ込んでいると掛かりやすい)
     const costMul=(1+clamp(dFit,-0.4,0.8)*0.5)*(1.08-0.08*clamp(f.stamRatio||1,0.6,1.5))*(turf?1+0.04*gi:1);
@@ -5732,6 +6019,13 @@ let raceViewMode='normal'; // レース演出: 'normal'通常 / 'fast'早送り 
 let modalQueue=[];
 let modalIndex=0;
 let racePlanOpen=false;
+let sireBookOpen=false;
+let pedBookMareId=null;
+let farmVisitOpen=false;
+let starOpen=false;
+let farmVisitTier='tiny';
+let pedigreeBookOpen=false;
+let moneyOpen=false;
 let racePlanHorseId=null;
 let cheatPanelOpen=false;
 let cheatMessage='';
@@ -5839,6 +6133,7 @@ function addTestMutantFoal(bad){
   return f;
 }
 const CHEAT_CODES={
+  'OWNERSCOUT':{label:'最強のサポーターを雇う(全馬の総合の強さを★5段階で見られる)',apply:()=>{S.supporters=S.supporters||{};S.supporters.star=1;}},
   'OWNER100':  {label:'資金 +100万円',        apply:()=>{S.money+=1000000;}},
   'OWNERRICH': {label:'資金を1000万円に設定',  apply:()=>{S.money=10000000;}},
   'OWNER50OKU':{label:'資金 +50億円',          apply:()=>{S.money+=5000000000;}},
@@ -5993,6 +6288,16 @@ function render(){
     key='hd:'+horseDetail.id;app.appendChild(closable(renderHorseDetailModal(),()=>{horseDetail=null;}));
   } else if(romanceOpen){
     key='rom';app.appendChild(closable(renderRomancePanel(),()=>{romanceOpen=false;}));
+  } else if(starOpen){
+    key='star';app.appendChild(closable(renderStarSupporter(),()=>{starOpen=false;}));
+  } else if(farmVisitOpen){
+    key='farmvisit';app.appendChild(closable(renderFarmVisit(),()=>{farmVisitOpen=false;}));
+  } else if(pedigreeBookOpen){
+    key='pbook';app.appendChild(closable(renderPedigreeBook(),()=>{pedigreeBookOpen=false;}));
+  } else if(moneyOpen){
+    key='money';app.appendChild(closable(renderMoneyModal(),()=>{moneyOpen=false;}));
+  } else if(sireBookOpen){
+    key='sbook';app.appendChild(closable(renderSireBook(),()=>{sireBookOpen=false;}));
   } else if(racePlanOpen){
     key='rplan';app.appendChild(closable(renderRacePlanModal(),()=>{racePlanOpen=false;}));
   } else if(cheatPanelOpen){
@@ -6093,6 +6398,7 @@ function renderHorseCard(h,gateNo){
 
   // ---- 今週のレース ----
   const sec=el(`<div class="race-sec"><div class="sec-h">今週のレース</div></div>`);
+  sec.appendChild(el(recentFormHtml(h)));
   const tPlan=trainerPlanOf(trainerOf(h));
   if(tPlan){
     const mode=h.raceMode==='owner'?'owner':'trainer';
@@ -6179,8 +6485,43 @@ function renderHorseActions(h){
   row.appendChild(mbtn);
   wrap.appendChild(row);
   wrap.appendChild(renderClassicRow(h));
+  if(!h.retired){
+    const ir=el(`<div class="stable-row"></div>`);
+    ir.appendChild(el(`<span>🛡 故障保険:${h.insured?`加入中(週 ${yen(INSURANCE_WEEKLY)})`:'未加入'}</span>`));
+    const ib=el(`<button class="act-btn">${h.insured?'解約する':'加入する'}</button>`);
+    ib.onclick=()=>{h.insured=!h.insured;toast(h.insured?`${h.name}を故障保険に加入した`:`${h.name}の故障保険を解約した`);render();};
+    ir.appendChild(ib);
+    wrap.appendChild(ir);
+  }
   wrap.appendChild(renderLayoffRow(h));
   wrap.appendChild(renderBreedingRow(h));
+  if(h.sex==='牡'){
+    const grow=el(`<div class="stable-row"></div>`);
+    if(h.gelded){
+      grow.appendChild(el(`<span>✂ セン馬(去勢済み・種牡馬にはなれない)</span>`));
+    } else {
+      grow.appendChild(el(`<span style="color:var(--text-dim);font-size:11px;">去勢すると、種牡馬入りの道は閉ざされますが、気性が落ち着きます(元に戻せません)。</span>`));
+      const gb=el(`<button class="act-btn">去勢する(セン馬にする)</button>`);
+      gb.onclick=()=>{
+        horseDetail=null;
+        askConfirm({title:`${h.name}を去勢しますか?`,
+          text:`費用 <b>${yen(GELDING_FEE)}</b>。去勢は元に戻せません。種牡馬入りができなくなる代わりに、気性が落ち着きます。`,
+          okLabel:'去勢する',danger:true,
+          onOk:()=>{
+            if(S.money<GELDING_FEE){toast('資金が足りません');return;}
+            S.money-=GELDING_FEE;
+            const before=h.temper==null?35:h.temper;
+            h.gelded=true;
+            h.geldedWeek=S.week;
+            // 去勢で気性は穏やかになる(能力そのものは変わらない)
+            h.temper=clamp(before-randInt(8,15),0,100);
+            addNews(`${h.name}を去勢し、セン馬にした。気性は落ち着いたが、種牡馬の道は閉ざされた。`,'money-out');
+          }});
+      };
+      grow.appendChild(gb);
+    }
+    wrap.appendChild(grow);
+  }
   const retireBtn=el(`<button class="act-btn retire">引退させる(セカンドキャリアを選ぶ)</button>`);
   retireBtn.onclick=()=>{careerHorseId=h.id;horseDetail=null;render();};
   const rr=el(`<div class="retire-row"></div>`);
@@ -6264,6 +6605,8 @@ function renderMarketCard(h,kind){
 
 function renderMarket(){
   const wrap=document.createElement('div');
+  wrap.appendChild(el(saleHistChartHtml()));
+  { const fvb=el(`<button class="act-btn" style="margin:4px 0 8px;">🏡 牧場を訪ねる(庭先取引)</button>`); fvb.onclick=()=>{farmVisitOpen=true;render();}; wrap.appendChild(fvb); }
   if(S.summerSaleActive && S.summerSaleMarket.length>0){
     wrap.appendChild(el(`<div class="section-label summer-label"><span>🌞 サマーセール開催中</span><span>中小牧場の掘り出し物</span></div>`));
     S.summerSaleMarket.forEach(h=>wrap.appendChild(renderMarketCard(h,true)));
@@ -6389,7 +6732,7 @@ function advanceWeek(opts){
       const power=base*condFactor*turfFactor*dirtFactor+jockeyBonus(h,jockey)+skillBonus+trainerBonus+randInt(-12,12)-distPen+mudPowerAdj(ensureMud(h),r)+(h.freshBonus||0)+extraPower(h,r,jockey);
       field.push({isPlayer:true,horse:h,power,name:h.name,jockeyName:jockey.name,jockeyFee:jockey.fee,jockeyKey:jockey.key,
         runStyle:h.runStyle,optDist:h.optDist,stamRatio:h.stamina/avgStat,gutsRatio:h.guts/avgStat,
-        jockeyStyle:jockey.style,jockeySkill:jockey.skill,temper:h.temper,frail:h.frail});
+        jockeyStyle:jockey.style,jockeySkill:jockey.skill,temper:h.temper,frail:h.frail,gelded:!!h.gelded,gene:h.gene});
     });
     // 他厩舎の馬(NPC)。年齢・成績・クラスを持ち、毎年成長・引退していく
     r._simulated=true;
@@ -6429,7 +6772,7 @@ function advanceWeek(opts){
       if(Math.random()<((h.frail==null?35:h.frail)*0.0007+tendonOf(h)*0.0005)*(hasFac('vet')?0.8:1)){ // 体質が弱いほど故障しやすい
         const inj=rollInjury(h,'race');
         adjustRep(inj.serious?-0.5:-0.2,inj.serious?-1:0,`${h.name}:レースで${inj.name}`);
-        injuryNotices.push(injuryText(h,inj,'race'));
+        injuryNotices.push(injuryText(h,inj,'race')+withInsurance(h,inj));
       }
       if(f.rank<=3) h.top3+=1;
       h.freshBonus=0;
@@ -6508,7 +6851,7 @@ function advanceWeek(opts){
       trainingLines.push(`<b>${h.name}</b>(${who}):${TRAIN_STAT_LABEL[plan.stat]}を強化。${TRAIN_STAT_LABEL[plan.stat]} +${plan.gain}`);
       if(Math.random()<((h.frail==null?35:h.frail)*0.00018+tendonOf(h)*0.00012)*(hasFac('vet')?0.8:1)){
         const inj=rollInjury(h,'train');
-        trainingLines.push(injuryText(h,inj,'train'));
+        trainingLines.push(injuryText(h,inj,'train')+withInsurance(h,inj));
       }
     }
   });
@@ -6531,10 +6874,11 @@ function advanceWeek(opts){
     const retiredNames=[];
     yearEndAwards(report); // 前年の年度表彰と馬主リーディング
     jockeyYearEnd(report); // 騎手リーディング・引退・新人デビュー
+    (S.moneyHist=S.moneyHist||[]).push({y:prevCal.yearIndex,money:S.money});
     yearReviewReport(prevCal.yearIndex,report); // 1年の振り返りカード
     updateLineTrends(report); // 父系の流行り廃り
     sireYearNotice(report,prevCal.yearIndex);
-    S.horses.forEach(h=>h.age+=1);
+    S.horses.forEach(h=>{h.age+=1;(h.abHist=h.abHist||[]).push({age:h.age,s:Math.round(h.speed),st:Math.round(h.stamina),g:Math.round(h.guts),y:prevCal.yearIndex});});
     const grown=S.horses.filter(h=>h.unnamed&&h.age>=2);
     if(grown.length>0){
       if(!S.pendingAdmissions) S.pendingAdmissions=[];
@@ -6602,6 +6946,7 @@ function advanceWeek(opts){
   // 開催中のセールでは、毎週いくらかの馬が他の馬主に落札されていく
   const sellOff=(list,label)=>{
     const sold=[];
+    if(list.length){S.saleHist=S.saleHist||[];S.saleHist.push({y:prevCal.yearIndex,label,avg:Math.round(list.reduce((a,h)=>a+(h.price||0),0)/list.length),n:list.length});}
     const rest=list.filter(h=>{
       if(Math.random()<0.18){sold.push(h);return false;}
       return true;
@@ -7411,6 +7756,33 @@ function renderAdmissionModal(){
 }
 
 /* ================= HORSE DETAIL ================= */
+/* ===== 能力の推移・セリの平均価格(SVGのグラフ) ===== */
+function abilityChartHtml(h){
+  const hist=(h.abHist||[]).slice();
+  hist.push({age:h.age,s:Math.round(h.speed),st:Math.round(h.stamina),g:Math.round(h.guts),now:true});
+  if(hist.length<2) return `<div class="modal-sub">能力の推移は、翌年になると記録されます。</div>`;
+  const W=300,H=130,P=22;
+  const xs=i=>P+i*(W-2*P)/(hist.length-1);
+  const ys=v=>(H-20)-(clamp(v,0,100)/100)*(H-30);
+  const line=(key,color)=>`<polyline fill="none" stroke="${color}" stroke-width="2" points="${hist.map((p,i)=>`${xs(i).toFixed(1)},${ys(p[key]).toFixed(1)}`).join(' ')}"/>`;
+  const grid=[0,50,100].map(v=>`<line x1="${P}" x2="${W-P}" y1="${ys(v).toFixed(1)}" y2="${ys(v).toFixed(1)}" stroke="currentColor" stroke-opacity=".15"/>`).join('');
+  const labels=hist.map((p,i)=>`<text x="${xs(i).toFixed(1)}" y="${H-4}" font-size="9" text-anchor="middle" fill="currentColor">${p.now?'今':p.age+'歳'}</text>`).join('');
+  return `<div class="ab-chart"><div class="section-label"><span>能力の推移</span><span><b style="color:#E8B94B">■</b>スピード <b style="color:#5FAE7E">■</b>スタミナ <b style="color:#7FB3E8">■</b>根性</span></div><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="能力の推移">${grid}${line('s','#E8B94B')}${line('st','#5FAE7E')}${line('g','#7FB3E8')}${labels}</svg></div>`;
+}
+function saleHistChartHtml(){
+  const hist=(S.saleHist||[]).slice(-12);
+  if(!hist.length) return `<div class="modal-sub">まだセリの記録はありません。</div>`;
+  const W=300,H=130,P=16;
+  const max=Math.max(...hist.map(x=>x.avg))*1.1||1;
+  const bw=(W-2*P)/hist.length;
+  const bars=hist.map((x,i)=>{
+    const bh=(x.avg/max)*(H-40);
+    const xx=P+i*bw+bw*0.15;
+    return `<rect x="${xx.toFixed(1)}" y="${(H-24-bh).toFixed(1)}" width="${(bw*0.7).toFixed(1)}" height="${bh.toFixed(1)}" fill="#E8B94B" opacity=".85"><title>開業${x.y}年目 ${x.label}: 平均${yen(x.avg)}(${x.n}頭)</title></rect><text x="${(P+i*bw+bw/2).toFixed(1)}" y="${H-10}" font-size="8" text-anchor="middle" fill="currentColor">${x.y}年${x.label.includes('ミックス')?'M':'S'}</text>`;
+  }).join('');
+  const recent=hist.slice(-4).map(x=>`${x.y}年目${x.label}:平均${yen(x.avg)}(${x.n}頭)`).join(' / ');
+  return `<div class="ab-chart"><div class="section-label"><span>セリの平均価格</span><span>M=ミックス S=セカンド</span></div><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="セリの平均価格">${bars}</svg><div class="modal-sub">${recent}</div></div>`;
+}
 function renderHorseDetailModal(){
   const h=horseDetail;
   const coat=coatInfo(h.coat);
@@ -7426,6 +7798,8 @@ function renderHorseDetailModal(){
     </div>
   </div>`));
   box.appendChild(el(`<div class="modal-sub">${h.sex} / ${h.age}歳 / ${coat.name}${h.blaze?'・流星':''} / 所属:${REGIONS[horseRegion(h)].name} / 現級:${horseClassLabel(h)} / 成長型:<b>${growthLabelFor(h)}</b></div>`));
+  box.appendChild(el(abilityChartHtml(h)));
+  box.appendChild(el(weightChartHtml(h)));
   box.appendChild(el(`<div class="pedigree-line" style="padding-left:0;margin-bottom:10px;">父:<b>${h.sireName}</b> 母:<b>${h.damName}</b> 母父:<b>${h.damSireName}</b>${h.nick?`<span class="nick-badge">◎${h.nick}</span>`:''}</div>`));
   box.appendChild(el(`<div class="pedigree-line" style="padding-left:0;margin-bottom:10px;">脚質:<b>${h.runStyle}</b> 適距離:<b>${optDistRange(h)}</b>${traitLineHtml(h)}${h.injury>0?` <span style="color:var(--loss)">🩹療養中(あと${h.injury}週)</span>`:''}</div>`));
   box.appendChild(el(renderPedigreeHtml(h)));
